@@ -1,0 +1,25 @@
+<div class="highlight"><pre><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+
+<span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">SEARCH_TOKEN</span> <span class="o">=</span> <span class="s">&quot;TransactionName=\&quot;&quot;</span><span class="o">;</span>
+
+<span class="kd">private</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">getTransactionType</span><span class="o">(</span><span class="n">String</span> <span class="n">input</span><span class="o">)</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">startIndex</span> <span class="o">=</span> <span class="n">input</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">SEARCH_TOKEN</span><span class="o">);</span>                
+    <span class="kt">int</span> <span class="n">endIndex</span> <span class="o">=</span> <span class="n">startIndex</span><span class="o">;</span>
+
+    <span class="k">if</span> <span class="o">(</span><span class="n">startIndex</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>                  
+
+    <span class="n">startIndex</span> <span class="o">+=</span> <span class="n">SEARCH_FOR_TOKEN</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>            <span class="c1">//Jump to the open quote</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">startIndex</span> <span class="o">&amp;</span><span class="n">lt</span><span class="o">;</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">endIndex</span> <span class="o">=</span> <span class="n">input</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="s">&quot;\&quot;&quot;</span><span class="o">,</span> <span class="n">startIndex</span><span class="o">);</span>     <span class="c1">//Find the end quote</span>
+    <span class="o">}</span>
+
+    <span class="k">if</span> <span class="o">(</span><span class="n">endIndex</span> <span class="o">&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">startIndex</span> <span class="o">&amp;</span><span class="n">amp</span><span class="o">;&amp;</span><span class="n">amp</span><span class="o">;</span> <span class="n">endIndex</span> <span class="o">&amp;</span><span class="n">lt</span><span class="o">;</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span><span class="o">())</span> <span class="o">{</span>       
+        <span class="k">return</span> <span class="n">input</span><span class="o">.</span><span class="na">substring</span><span class="o">(</span><span class="n">startIndex</span><span class="o">,</span> <span class="n">endIndex</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+<span class="o">}</span>
+<span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+
+<span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
+</pre></div>

@@ -1,0 +1,15 @@
+<div class="highlight"><pre><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+
+<span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="kd">public</span> <span class="n">String</span> <span class="n">getTransType</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="n">Logger</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">&quot;getTransactionType called&quot;</span><span class="o">);</span>
+        <span class="k">return</span> <span class="n">TransactionTypeExtractor</span><span class="o">.</span><span class="na">getTransactionType</span><span class="o">(</span><span class="n">getBody</span><span class="o">().</span><span class="na">getInputStream</span><span class="o">(</span><span class="kc">null</span><span class="o">));</span>
+    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">Logger</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">&quot;Failed to get transactionType&quot;</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span> <span class="c1">// Something went wrong</span>
+<span class="o">}</span>
+<span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+
+<span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
+</pre></div>
