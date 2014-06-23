@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Ideas, Solutions, Work in progress</title>
+  <title>Split Business Transactions on Oracle Service Bus Using AppDynamics - Ideas, Solutions, Work in progress</title>
   <meta name="author" content="Dirk van Rensburg">
 
   
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://dirkvanrensburg.github.io">
+  <link rel="canonical" href="http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Ideas, Solutions, Work in progress" type="application/atom+xml">
@@ -64,15 +64,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/">Split Business Transactions on Oracle Service Bus Using AppDynamics</a></h1>
+      <h1 class="entry-title">Split Business Transactions on Oracle Service Bus Using AppDynamics</h1>
     
     
       <p class="meta">
@@ -95,7 +92,7 @@
   </header>
 
 
-  <div class="entry-content"><h3>Overview</h3>
+<div class="entry-content"><h3>Overview</h3>
 
 <p>We recently helped a customer configure AppDynamics to monitor their business transactions on <a href="http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html">Oracle OSB</a>. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky.</p>
 
@@ -412,18 +409,57 @@
 
 <p>With AppDynamics it is possible to get really useful information out of a running application. It has very flexible configuration, which allows you to really dive deep into the application internals to find issues and separate transactions. However, sometimes it is better to give AppDynamics a hook into the internal information so that it can work more efficiently. When you have access to the application code then this can easily be achieved by adding some code. When it is not practical to rebuild the entire application then you can always use byte code injection.</p>
 </div>
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">Dirk van Rensburg</span></span>
+
+      
+
+
+
+
+
+
+
+
   
 
 
-    </article>
+<time datetime="2014-06-23T00:00:00+10:00" pubdate data-updated="true">Jun 23<span>rd</span>, 2014</time>
+      
+
+<span class="categories">
   
-  <div class="pagination">
+    <a class='category' href='/blog/categories/apm/'>APM</a>, <a class='category' href='/blog/categories/appdynamics/'>AppDynamics</a>, <a class='category' href='/blog/categories/byte-code-injection/'>Byte Code Injection</a>, <a class='category' href='/blog/categories/java/'>Java</a>, <a class='category' href='/blog/categories/oracle-osb/'>Oracle OSB</a>
+  
+</span>
+
+
+    </p>
     
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/" data-via="" data-counturl="http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/" >Tweet</a>
+  
+  
+  
 </div>
+
+    
+    <p class="meta">
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
 <aside class="sidebar">
   
     <section>
@@ -447,6 +483,7 @@
 
   
 </aside>
+
 
     </div>
   </div>
