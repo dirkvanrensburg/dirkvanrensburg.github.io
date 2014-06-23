@@ -1,0 +1,6 @@
+// This File is imported last, and will override other styles in the cascade
+// Add styles here to make changes without digging in too much
+<<<<<<< HEAD
+@import "custom/imgcaption"
+=======
+>>>>>>> babb784d96abbac79ffd96ac68454f73f8297baa
