@@ -1,24 +1,98 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Ideas, Solutions, Work in progress]]></title>
-  <link href="http://dirkvanrensburg.github.io/atom.xml" rel="self"/>
-  <link href="http://dirkvanrensburg.github.io/"/>
-  <updated>2014-06-23T16:47:24+10:00</updated>
-  <id>http://dirkvanrensburg.github.io/</id>
-  <author>
-    <name><![CDATA[Dirk van Rensburg]]></name>
-    
-  </author>
-  <generator uri="http://octopress.org/">Octopress</generator>
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Split Business Transactions on Oracle Service Bus Using AppDynamics - Ideas, Solutions, Work in progress</title>
+  <meta name="author" content="Dirk van Rensburg">
 
   
-  <entry>
-    <title type="html"><![CDATA[Split Business Transactions on Oracle Service Bus Using AppDynamics]]></title>
-    <link href="http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/"/>
-    <updated>2014-06-23T00:00:00+10:00</updated>
-    <id>http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics</id>
-    <content type="html"><![CDATA[<h3>Overview</h3>
+  <meta name="description" content="Overview We recently helped a customer configure AppDynamics to monitor their business transactions on Oracle OSB. AppDynamics does not have built-in &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ideas, Solutions, Work in progress" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ideas, Solutions, Work in progress</a></h1>
+  
+    <h2>and other things</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:dirkvanrensburg.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/about">About and contact</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Split Business Transactions on Oracle Service Bus Using AppDynamics</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-06-23T00:00:00+10:00" pubdate data-updated="true">Jun 23<span>rd</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h3>Overview</h3>
 
 <p>We recently helped a customer configure AppDynamics to monitor their business transactions on <a href="http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html">Oracle OSB</a>. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky.</p>
 
@@ -30,40 +104,40 @@
 
 <p>The following image is an example application reproducing the design of the real application.</p>
 
-<p><img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/example_osb_proxy_service.png" title="Example Application" ></p>
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/example_osb_proxy_service.png" title="Example Application" ></p>
 
 <h3>Finding the business transactions</h3>
 
 <p>It is a bit tricky to find the business transactions for this application because the services on Oracle OSB are all implemented by configuring the same Oracle classes. Each Proxy Service is just another instance of the same class and the call graph in the transaction snapshot is full of generic sounding names like <em>&lsquo;AssignRuntimeStep&rsquo;</em></p>
 
-<p><img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/callgraph.png" title="Proxy Service call graph" ></p>
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/callgraph.png" title="Proxy Service call graph" ></p>
 
 <p>The first step to figuring out how to separate the business transactions is using the AppDynamics <a href="http://docs.appdynamics.com/display/PRO14S/Configure+Data+Collectors">Method Invocation Data Collector</a> feature. This gives you a way to inspect the method parameters in the call and printing their values. Method invocation data collectors allows you to configure AppDynamics to capture the value of a parameter for a particular method invocation. Not only the value of the parameter but it is possible to apply a chain of get- methods to the parameter.</p>
 
 <p>The following figure shows data collector configuration to get information out of the parameters passed to the <em>processMessage</em> method on the <em>AssignRuntimeStep</em> class we noticed in the call graph. This data collector tells AppDynamics to capture the first parameter to the <em>processMessage</em> method on the class <em>AssignRuntimeStep</em> and then to collect the result of calling <em>toString()</em> and <em>getClass().getName()</em> on that parameter.</p>
 
-<p><img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/method_invocation_data_collector.png" title="Method Invocation Data Collector" ></p>
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/method_invocation_data_collector.png" title="Method Invocation Data Collector" ></p>
 
 <p>The results of this can be seen in the following images. The first shows the result of the <em>toString()</em> applied to the first parameter</p>
 
-<p><img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/user_data1.png"></p>
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/user_data1.png"></p>
 
 <p>and the second shows the class of the parameter. Notice that the class name is repeated three times. It is a list of values, one value saved for every invocation of the <em>processMessage</em> method.</p>
 
-<p><img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/user_data2.png"></p>
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/user_data2.png"></p>
 
 <p>From the first image it is obvious that the input message is contained in the first parameter. You can also see that the messages is stored in a map like structure and the key is called <em>body</em>. The second image shows the type of the first parameter so the message is contained in an object of class <em>MessageContextImpl</em>.</p>
 
 <p>The next step is to tell AppDynamics what to use for splitting the business transactions and this can be done by using a <a href="http://docs.appdynamics.com/display/PRO14S/Match+Rule+Conditions">Business Transaction Match Rule</a>. The number of characters from the start of the message to the field we are interested in are roughly <strong>126</strong> and assuming the transaction names will be around 20 characters we can set up a match rule as follows:</p>
 
-<p><img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/new_bt_match_rule_1.png" title="New Business Transaction Match Rule" >
-<img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_1.png" title="New Business Transaction Match Rule - Split" ></p>
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/new_bt_match_rule_1.png" title="New Business Transaction Match Rule" >
+<img class="center" src="/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_1.png" title="New Business Transaction Match Rule - Split" ></p>
 
 <p>Note the number of arguments (2) set in the above image. That value is important and the transactions will not show up at all if the wrong value is used. We determined the value by decompiling the Weblogic class but you can always do it by first trying 1 and then 2.</p>
 
 <p>With the above configuration in place the AppDynamics agent is able to pick up the different transactions. The transaction names aren&rsquo;t perfect but it works!</p>
 
-<p><img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/discovered_business_transactions.png" title="Discovered business transactions" ></p>
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/discovered_business_transactions.png" title="Discovered business transactions" ></p>
 
 <h3>Optimise and get the correct name</h3>
 
@@ -325,16 +399,121 @@
 
 <p>Now the AppDynamics agent configuration can be updated to use the new <em>ec_getTransType</em> method.</p>
 
-<p><img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_2.png" title="&#34;Using new method to split&#34;" alt="&#34;Using new method to split&#34;"></p>
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_2.png" title="&#34;Using new method to split&#34;" alt="&#34;Using new method to split&#34;"></p>
 
 <p>The resulting business transaction names now looks much better.</p>
 
-<p><img class="center" src="http://dirkvanrensburg.github.io/images/split_bt_on_OSB_AppD/discovered_business_transactions_2.png" title="&#34;Properly named transactions&#34;" alt="&#34;Properly named transactions&#34;"></p>
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/discovered_business_transactions_2.png" title="&#34;Properly named transactions&#34;" alt="&#34;Properly named transactions&#34;"></p>
 
 <h3>Conclusion</h3>
 
 <p>With AppDynamics it is possible to get really useful information out of a running application. It has very flexible configuration, which allows you to really dive deep into the application internals to find issues and separate transactions. However, sometimes it is better to give AppDynamics a hook into the internal information so that it can work more efficiently. When you have access to the application code then this can easily be achieved by adding some code. When it is not practical to rebuild the entire application then you can always use byte code injection.</p>
-]]></content>
-  </entry>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
   
-</feed>
+
+<span class="byline author vcard">Posted by <span class="fn">Dirk van Rensburg</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-06-23T00:00:00+10:00" pubdate data-updated="true">Jun 23<span>rd</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/apm/'>APM</a>, <a class='category' href='/blog/categories/appdynamics/'>AppDynamics</a>, <a class='category' href='/blog/categories/byte-code-injection/'>Byte Code Injection</a>, <a class='category' href='/blog/categories/java/'>Java</a>, <a class='category' href='/blog/categories/oracle-osb/'>Oracle OSB</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/" data-via="" data-counturl="http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Dirk van Rensburg</h1>
+  <p>Software development, architecture, performance and other cool stuff</p>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/">Split Business Transactions on Oracle Service Bus Using AppDynamics</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Dirk van Rensburg -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
