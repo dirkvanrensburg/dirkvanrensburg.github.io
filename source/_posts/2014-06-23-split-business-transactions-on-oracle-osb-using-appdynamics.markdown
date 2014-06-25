@@ -12,10 +12,11 @@ We recently helped a customer configure AppDynamics to monitor their business tr
 
 The OSB was accepting SOAP messages from a proprietary upstream system all on one endpoint. It then inspected the message and called one or more services on the OSB, essentially routing the incoming messages. AppDynamics grouped all these messages as one business transaction because they all arrived at the same endpoint. This was not acceptable as a significant number of distinct business transactions were processed this way. We had to find a way to separate the business transaction using the input data.
 
-The rest of this article describes the solution we implemented using an example OSB application which resembles the actual one.
+Changing the application was not an option so, we solved this by augmenting the _application server_ code to give AppDynamics an efficient way to determine the business transaction name. The rest of this article describes how AppDynamics was used to find a solution, and how we improved the solution using custom byte code injection. 
+
 
 ### Example Application
-The following image is an example application reproducing the design of the real application.  
+An example OSB application which reproduces the design of the actual application is used to illustrate the problem and solution.  
 
 {% img center /images/split_bt_on_OSB_AppD/example_osb_proxy_service.png Example Application %}
 
@@ -38,7 +39,7 @@ and the second shows the class of the parameter. Notice that the class name is r
 
 {% img center /images/split_bt_on_OSB_AppD/user_data2.png %}
 
-From the first image it is obvious that the input message is contained in the first parameter. You can also see that the messages is stored in a map like structure and the key is called _body_. The second image shows the type of the first parameter so the message is contained in an object of class _MessageContextImpl_.    
+From the first image it is obvious that the input message is contained in the first parameter. You can also see that the messages is stored in a map like structure and the key is called _body_. Note that the business transaction name is visible in the first image **TranactionName="Business Transaction1"**. The second image shows the type of the first parameter so the message is contained in an object of class _MessageContextImpl_.    
 
 The next step is to tell AppDynamics what to use for splitting the business transactions and this can be done by using a [Business Transaction Match Rule][matchconditions]. The number of characters from the start of the message to the field we are interested in are roughly __126__ and assuming the transaction names will be around 20 characters we can set up a match rule as follows:  
 
@@ -55,9 +56,7 @@ With the above configuration in place the AppDynamics agent is able to pick up t
 
 This solution is OK, but it has a few issues. Firstly the transaction names are either cut off or include characters that are not part of the transaction name. It is also not very efficient, because it requires the entire _MessageContextImpl_ instance to be serialised as a String just to extract a small part of it. To improve this we need to add custom code to the _MessageContextImpl_ class so that we can access the data in a more efficient way.
 
-The first step is to write some Java code that can search a string in a reluctant way to find the exact transaction name.
-
-Consider the following Java code:
+Consider the following Java code to search a string for the transaction name:
 
 {% codeblock lang:java %}
 	private static final SEARCH_TOKEN = "TransactionName=\"";
@@ -68,7 +67,7 @@ Consider the following Java code:
 		
 		if (startIndex == -1) return null; 					
 		
-		startIndex += SEARCH_FOR_TOKEN.length(); 			//Jump to the open quote
+		startIndex += SEARCH_TOKEN.length(); 			//Jump to the open quote
 		if (startIndex < input.length() -1) {
 			endIndex = input.indexOf("\"", startIndex);		//Find the end quote
 		}
@@ -83,7 +82,7 @@ Consider the following Java code:
 
 This is a statically accessible piece of code that will extract the transaction name from an arbitrary string. It first tries to find the token in the input string. Once the token is found it determines the open and end quote positions and returns the transaction name. If nothing is found then return _null_. 
 
-Consider the following abbreviated code which calls the above method.
+The next step is to write some Java code that can use the above code without loading the entire string into memory.
 {% codeblock lang:java %}
 	public static short WITHIN = 512;      
 	public static short BUFFER_SIZE = 256;
@@ -126,7 +125,7 @@ Consider the following abbreviated code which calls the above method.
 	}
 {% endcodeblock %}
 
-The above method accepts an _InputStream_ and progressively read it, 256 characters at a time, to find the transaction type. It is limited to search only the first 512 characters as an optimisation based on the known message structure. It will likely always find the transaction type within the first 256 characters, but 512 makes it a certainty. Also note the variables _WITHIN_ and *BUFFER_SIZE*, which is a way of making the function configurable and future proof.
+This method accepts an _InputStream_ and progressively reads it, 256 characters at a time, to find the transaction type. It is limited to search only the first 512 characters as an optimisation based on the known message structure. It will likely always find the transaction type within the first 256 characters, but 512 makes it a certainty. Also note the variables _WITHIN_ and *BUFFER_SIZE*, which are there to make the code configurable and future proof.
 
 The code listed above can be included in a custom Java agent that will instrument the Weblogic code using a [ClassFileTransformer][class_transformer]. Creating Java agents and class transformers are out of the scope of this article. It focuses on the bits actually injected. For more on creating a custom Java agent see the [java.lang.instrument][java_instrument] documentation.
 
@@ -140,7 +139,7 @@ So for the agent to inject the following piece of code into the _MessageContextI
 
 {% codeblock lang:java %}
 
-	public String getTransType() {
+	public String ec_getTransType() {
 		try {
 			Logger.INSTANCE.debug("getTransactionType called");
 			return TransactionTypeExtractor.getTransactionType(getBody().getInputStream(null));
