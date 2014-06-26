@@ -8,7 +8,7 @@ categories: [Oracle OSB, AppDynamics, APM, Java, Byte Code Injection]
 
 ### Overview
 
-We recently helped a customer configure AppDynamics to monitor their business transactions on [Oracle OSB][oracleosb]. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky. 
+[We][ecetera] recently helped a customer configure AppDynamics to monitor their business transactions on [Oracle OSB][oracleosb]. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky. 
 
 The OSB was accepting SOAP messages from a proprietary upstream system all on one endpoint. It then inspected the message and called one or more services on the OSB, essentially routing the incoming messages. AppDynamics grouped all these messages as one business transaction because they all arrived at the same endpoint. This was not acceptable as a significant number of distinct business transactions were processed this way. We had to find a way to separate the business transaction using the input data.
 
@@ -214,6 +214,8 @@ The resulting business transaction names now looks much better.
 
 With AppDynamics it is possible to get really useful information out of a running application. It has very flexible configuration, which allows you to really dive deep into the application internals to find issues and separate transactions. However, sometimes it is better to give AppDynamics a hook into the internal information so that it can work more efficiently. When you have access to the application code then this can easily be achieved by adding some code. When it is not practical to rebuild the entire application then you can always use byte code injection. 
 
+
+<a href="#references"></a>
 [oracleosb]: http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html 
 [midc]: http://docs.appdynamics.com/display/PRO14S/Configure+Data+Collectors
 [matchconditions]: http://docs.appdynamics.com/display/PRO14S/Match+Rule+Conditions
@@ -221,3 +223,4 @@ With AppDynamics it is possible to get really useful information out of a runnin
 [asm_guide]:http://download.forge.objectweb.org/asm/asm4-guide.pdf
 [java_instrument]: http://docs.oracle.com/javase/7/docs/api/java/lang/instrument/package-summary.html
 [class_transformer]:http://docs.oracle.com/javase/7/docs/api/java/lang/instrument/package-summary.html
+[ecetera]:http://www.ecetera.com.au
