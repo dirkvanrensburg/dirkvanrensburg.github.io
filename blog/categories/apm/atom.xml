@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Apm | Ideas, Solutions, Work in progress]]></title>
   <link href="http://dirkvanrensburg.github.io/blog/categories/apm/atom.xml" rel="self"/>
   <link href="http://dirkvanrensburg.github.io/"/>
-  <updated>2014-06-26T10:40:13+10:00</updated>
+  <updated>2014-06-26T10:44:11+10:00</updated>
   <id>http://dirkvanrensburg.github.io/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
@@ -19,8 +19,6 @@
     <updated>2014-06-23T00:00:00+10:00</updated>
     <id>http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics</id>
     <content type="html"><![CDATA[<h3>Overview</h3>
-
-<p><a href="./#references">references</a></p>
 
 <p><a href="http://www.ecetera.com.au">We</a> recently helped a customer configure AppDynamics to monitor their business transactions on <a href="http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html">Oracle OSB</a>. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky.</p>
 
