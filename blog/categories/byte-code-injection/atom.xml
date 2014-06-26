@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Byte Code Injection | Ideas, Solutions, Work in progress]]></title>
   <link href="http://dirkvanrensburg.github.io/blog/categories/byte-code-injection/atom.xml" rel="self"/>
   <link href="http://dirkvanrensburg.github.io/"/>
-  <updated>2014-06-26T10:26:58+10:00</updated>
+  <updated>2014-06-26T10:40:13+10:00</updated>
   <id>http://dirkvanrensburg.github.io/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
@@ -20,7 +20,9 @@
     <id>http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics</id>
     <content type="html"><![CDATA[<h3>Overview</h3>
 
-<p>We recently helped a customer configure AppDynamics to monitor their business transactions on <a href="http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html">Oracle OSB</a>. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky.</p>
+<p><a href="./#references">references</a></p>
+
+<p><a href="http://www.ecetera.com.au">We</a> recently helped a customer configure AppDynamics to monitor their business transactions on <a href="http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html">Oracle OSB</a>. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky.</p>
 
 <p>The OSB was accepting SOAP messages from a proprietary upstream system all on one endpoint. It then inspected the message and called one or more services on the OSB, essentially routing the incoming messages. AppDynamics grouped all these messages as one business transaction because they all arrived at the same endpoint. This was not acceptable as a significant number of distinct business transactions were processed this way. We had to find a way to separate the business transaction using the input data.</p>
 
@@ -367,6 +369,8 @@
 <h3>Conclusion</h3>
 
 <p>With AppDynamics it is possible to get really useful information out of a running application. It has very flexible configuration, which allows you to really dive deep into the application internals to find issues and separate transactions. However, sometimes it is better to give AppDynamics a hook into the internal information so that it can work more efficiently. When you have access to the application code then this can easily be achieved by adding some code. When it is not practical to rebuild the entire application then you can always use byte code injection.</p>
+
+<p><a href="#references"></a></p>
 ]]></content>
   </entry>
   
