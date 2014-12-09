@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: Appdynamics, | Ideas, Solutions, Work in progress]]></title>
+  <title><![CDATA[Category: Appdynamics | Ideas, Solutions, Work in progress]]></title>
   <link href="http://dirkvanrensburg.github.io/blog/categories/appdynamics/atom.xml" rel="self"/>
   <link href="http://dirkvanrensburg.github.io/"/>
-  <updated>2014-12-09T16:43:08+11:00</updated>
+  <updated>2014-12-10T10:59:16+11:00</updated>
   <id>http://dirkvanrensburg.github.io/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
@@ -14,200 +14,353 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Extending Metrics for Complex Dashboards in AppDynamics]]></title>
-    <link href="http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/"/>
-    <updated>2014-11-28T15:16:35+11:00</updated>
-    <id>http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics</id>
+    <title type="html"><![CDATA[Split Business Transactions on Oracle Service Bus Using AppDynamics]]></title>
+    <link href="http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/"/>
+    <updated>2014-06-23T00:00:00+10:00</updated>
+    <id>http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics</id>
     <content type="html"><![CDATA[<h3>Overview</h3>
 
-<p>A couple of month ago at <a href="http://www.ecetera.com.au" title="Ecetera">work</a>, I was tasked to replicate one of our client&rsquo;s <a href="http://www.ca.com/us/opscenter/ca-application-performance-management.aspx" title="CA Application Performance Management">Wily Introscope</a> dashboards in <a href="http://www.appdynamics.com" title="AppDynamics">AppDynamics</a>. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application.</p>
+<p><a href="http://www.ecetera.com.au">We</a> recently helped a customer configure AppDynamics to monitor their business transactions on <a href="http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html">Oracle OSB</a>. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky.</p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/wily_dashboard.png" title="Example of the Wily Dashboard" ></p>
+<p>The OSB was accepting SOAP messages from a proprietary upstream system all on one endpoint. It then inspected the message and called one or more services on the OSB, essentially routing the incoming messages. AppDynamics grouped all these messages as one business transaction because they all arrived at the same endpoint. This was not acceptable as a significant number of distinct business transactions were processed this way. We had to find a way to separate the business transaction using the input data.</p>
 
-<p>The status light colours were assigned as follows:</p>
+<p>Changing the application was not an option so, we solved this by augmenting the <em>application server</em> code to give AppDynamics an efficient way to determine the business transaction name. The rest of this article describes how AppDynamics was used to find a solution, and how we improved the solution using custom byte code injection.</p>
 
-<table>
-<thead>
-<tr>
-<th> <strong>Status</strong>    </th>
-<th>        <strong>Meaning</strong>                                    </th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td> GREY      </td>
-<td> No activity since 5am this morning                    </td>
-</tr>
-<tr>
-<td> RED       </td>
-<td> No activity in the last hour, but something since 5 am    </td>
-</tr>
-<tr>
-<td> YELLOW    </td>
-<td> No activity in the last 10 minutes, but some in the last hour </td>
-</tr>
-<tr>
-<td> GREEN     </td>
-<td> Activity in the last 10 minutes               </td>
-</tr>
-</tbody>
-</table>
+<h3>Example Application</h3>
 
-
-<p>&nbsp;<br/>
-The data for each light was gathered by Introscope using custom instrumentation points looking for calls to a particular POJO method. The first parameter to this method was the client identifier, so Introscope collected metrics for each call to this method grouping it by 10 minutes, 1 hour and 1 day.</p>
-
-<p>In this post I will describe what I did to reproduce the dashboard in AppDynamics. Even though it is a rather hacky work around, it is still interesting. The solution works by extracting metrics from AppDynamics using the REST API and sending it back in as new metrics, which can be used by health rules to drive status lights.</p>
-
-<p><em>The code and examples in this post is from an example application built to illustrate the solution more clearly.</em></p>
-
-<p><em>See github: <a href="https://github.com/dirkvanrensburg/blogs-appd-metrics-for-dashboards">https://github.com/dirkvanrensburg/blogs-appd-metrics-for-dashboards</a></em></p>
-
-<h3>Status lights in AppDynamics</h3>
-
-<p>The status light in AppDynamics relies on a health rule to drive the state of the light. The AppDynamics status light is green by default, to indicate no health rule violations. Yellow for WARNING rule violations and Red for CRITICAL rule violations. The status light in Introscope is grey when there is no data, so it essentially has four states compared to the three states available in AppDynamics.</p>
-
-<p>As mentioned, the AppDynamics status light uses one health rule, which means you cannot tie the different colours of the light to metrics gathered over different time ranges. The time range for the light is determined by the setting on the widget or the dashboard, where the Introscope status light can use separate metrics for each status.</p>
-
-<h3>Getting the information</h3>
-
-<p>The first step to solving the problem is to gather the information we need to display. We can look at the Introscope probe configuration to see what it uses for for the status light:</p>
-
-<pre><code>TraceOneMethodWithParametersOfClass: SomeCentralClass loadItems(Ljava/lang/String;)V BlamedMethodRateTracer "SYS|Service By Client|{0}:Invocations Per Second"
-</code></pre>
-
-<p>This means that Introscope will count the invocations per second of a method called <strong>loadItems</strong>, on an instance of the class <strong>SomeCentralClass</strong> and group this count by the client identifier <em>(the String parameter to loadItems)</em>.</p>
-
-<h4>Information points</h4>
-
-<p>To capture that type of information in AppDynamics you use <a href="https://docs.appdynamics.com/display/PRO39/Configure+Code+Metric+Information+Points" title="AppDynamics Information Points">information points</a>. Information points tracks calls to a method on a POJO and collects metrics such as <em>Calls Per Minute</em> and <em>Average Response Time</em>. AppDynamics does not allow information points to be <em>&ldquo;split&rdquo;</em> by parameter in a generic way. That means to get the required information, we have to create an information point for every client.</p>
-
-<p>You create information points by opening the <em>Information Points</em> view from the side menu and clicking on <em>New</em></p>
-
-<pre><code>Analyse -&gt; Information Points -&gt; New
-</code></pre>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/information_points.png" title="Information Points in AppDynamics" ></p>
-
-<p>Information points track calls to specific methods so you need to provide the <em>class name</em>, <em>method name</em> of the method to collect metrics for. In this case we want separate informations points based on the parameter to the method call, so we need to set a <em>match condition</em></p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/capture_information_point.png" title="Capture Information Point" ></p>
-
-<p>The information point will then start collecting data for <em>Average Response Time</em>, <em>Calls per minute</em>, and <em>Errors per minute</em> as seen on the following dashboard view.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/infopoint_metrics.png" title="Information Point Metrics" ></p>
-
-<p>Once defined, the information points are also available in the metric browser where you can plot the different metrics of each information point on the same graph. The following image shows the <em>Average Response Time</em> for <strong>CLIENT2</strong> and <strong>CLIENT4</strong></p>
-
-<pre><code>Analyse -&gt; Metric Browser
-</code></pre>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/infopoints_metricbrowser.png"></p>
-
-<h3>Using the REST API</h3>
-
-<p>The AppDynamics controller provides a <a href="https://docs.appdynamics.com/display/PRO39/Use+the+AppDynamics+REST+API" title="AppDynamics REST API">REST API</a>, which enables you to programmatically extract information out of the controller and, in the case of configuration, send information to the controller. This means that we can call the controller to get the metric information of the information points we just configured. The URL to an information point metric can be retrieved from the metric browser. Right click on the information point and the metric you are interested in, <em>Calls per Minute</em> in our case, and select <em>Copy REST URL</em></p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/get_rest_url.png" title="&ldquo;Rest URL from metric browser&rdquo;" ></p>
-
-<p>This will copy the URL to the clipboard and you can test it by pasting it into a new tab in your web browser. You should see something like this</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/rest_results_example.png" title="&ldquo;Example REST results&rdquo;" ></p>
-
-<p>The URL can be changed to get the information over different time ranges by changing the <em>time-range-type</em> and <em>duration-in-mins</em> fields. The <em>time-range-type</em> field is used to get information relative to a point in time, so for example it can be used to get information for the last 15 minutes or for the 30 minutes after 10 am this morning. We can use this to get the information we are after out of AppDynamics. We can get the number of times each client called the service in the last 10, 60 or 960 minutes by changing these fields and calling the controller.</p>
-
-<p>Having the information available as a REST service call is one thing, but we need it <em>in</em> the controller so we can create a dashboard. It is of no real use on the outside. To get metrics into the controller we need to use the Standalone Machine Agent.</p>
-
-<h3>The Standalone Machine Agent</h3>
-
-<p>The <a href="https://docs.appdynamics.com/display/PRO39/Standalone+Machine+Agent">Standalone Machine Agent</a> is a Java application whose primary function is to monitor machine statistics such as CPU, Memory utilisation and Disk IO. It also provides a way to send metrics into AppDynamics by means of a <a href="https://docs.appdynamics.com/display/PRO39/Add+Metrics+with+a+Monitoring+Extension">Monitoring Extension</a>. The extension can supplement the existing metrics in AppDynamics by sending your custom metrics to the controller. A custom metric can be common across the nodes or associated with a specific tier. You specify the path, as seen in the metric browser, where the metrics should be collected relative to the root <em>Custom Metrics</em></p>
-
-<h4>Get the information out</h4>
-
-<p>As mentioned before the metrics we are interested in can be extracted from the AppDynamics controller using the REST API and using the Standalone Machine Agent we can create new metrics, which we can use for the dashboard. Using the following REST API call, we can get the metrics captured by our information points rolled up to the different time ranges. The call below will get the <em>Calls per Minute</em> metric of <em>CLIENT1</em></p>
-
-<pre><code>http://controller:8090/controller/rest/applications/ComplexDashboardTest/metric-data?metric-path=Information Points|C1|Calls per Minute&amp;time-range-type=BEFORE_NOW&amp;duration-in-mins=10
-</code></pre>
-
-<p>By calling the above REST call multiple times for every client we can get values for <em>Calls per Minute</em> rolled up over the periods we are interested in (10, 60 and 960 minutes). However, just getting the values of the last 960 minutes (16 hours) is not good enough since it will give incorrect values early in the day. Before 13h00 it could still pick up calls from the previous day, so we need a different approach.  To do this we change the <em>time-range-type</em> to <strong>AFTER_TIME</strong> and provide a start time of 5am the morning. This will then only return values for the 960 minutes after 5am.</p>
-
-<p>The following REST call will do that - replace the <strong>${timeat5am}</strong> value with the UNIX time for 5am of that day.</p>
-
-<pre><code>http://controller:8090/controller/rest/applications/ComplexDashboardTest/metric-data?metric-path=Information Points|C1|Calls per Minute&amp;time-range-type=AFTER_TIME&amp;start-time=${timeat5am}000&amp;duration-in-mins=960
-</code></pre>
-
-<h4>Send the information back in</h4>
-
-<p>To send the information back in we need to actually create the monitoring extension, which essentially is a script which the Standalone machine agent will call periodically and any values the script writes to standard output will be forwarded to the controller. We want the script to send metrics such as the following:</p>
-
-<pre><code>name=Custom Metrics|Information Points|CLIENT1|Calls per 10 Minutes,value=0
-name=Custom Metrics|Information Points|CLIENT1|Calls per 60 Minutes,value=2
-name=Custom Metrics|Information Points|CLIENT1|Calls per 960 Minutes,value=2
-name=Custom Metrics|Information Points|CLIENT2|Calls per 10 Minutes,value=0
-name=Custom Metrics|Information Points|CLIENT2|Calls per 60 Minutes,value=1
-name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
-
-...And so on for all the clients
-</code></pre>
-
-<p>Once we have the extension installed and reporting, the new metrics will show up in the AppDynamics metric browser at the following location, assuming the machine agent is reporting for the tier called <em>&lsquo;OneTier&rsquo;</em>.</p>
-
-<pre><code>Application Infrastructure Performance -&gt; OneTier -&gt; Custom Metrics
-</code></pre>
-
-<p>There will be a section for each client (<strong>CLIENT1</strong> to <strong>CLIENTx</strong>) and each will have a metric for each of the time ranges we are interested in (10, 60 and 960 minutes)</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/new_metrics_in_browser.png" title="&ldquo;The new metrics displayed in the browser&rdquo;" ></p>
-
-<h3>Health Rules</h3>
-
-<p><a href="https://docs.appdynamics.com/display/PRO39/Health+Rules">Health Rules</a> provides a way to specify conditions which the system will consider WARNING or CRITICAL conditions. You specify the metric to monitor and the threshold or baseline to compare it to for both the WARNING and CRITICAL condition.</p>
-
-<p>We can now create health rules to track these metrics, so that the dashboard lights can show how recently a particular client accessed the system. To create a health rule we use the side menu in the AppDynamics controller.</p>
-
-<pre><code>Alert &amp; Response -&gt; Health Rules -&gt; (click on +)
-</code></pre>
-
-<p>First specify a name for the rule, the type of metric we will use and the time range to use when evaluating the health rule. The last 5 minutes is good enough since the machine agent will send a value every minute and the value it sends is already summed over the period in question.</p>
-
-<p>We need to create one health rule for every client
-<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_step1.png" title="&ldquo;Create the health rule&rdquo;" ></p>
-
-<p>The WARNING condition is raised if there were no calls in the last 10 minutes, but some in the last 60 minutes.
-<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_warning.png" title="&ldquo;Create the health rule&rdquo;" ></p>
-
-<p>The CRITICAL condition is raised if there were no calls in the last 60 minutes.
-<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_critical.png" title="&ldquo;Create the health rule&rdquo;" ></p>
-
-<h3>Putting it all together</h3>
-
-<p>Now we have all the information we need to start assembling the dashboard. Status lights only work on <em>Custom Dashboard</em> as opposed to <em>Node/Tier Dashboards</em>. To create a <em>Custom Dashboard</em> we click on the AppDynamics logo at the left top an choose <em>Custom Dashboards</em></p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/select_custom_dashboards.png" title="&ldquo;Create Custom Dashboard&rdquo;" ></p>
-
-<p>Next we create a new dashboard by clicking on the <em>Create Dashboad</em> and set the layout of the canvas to <strong>absolute</strong>. This is because the grid layout does not support metric labels on top of other widgets and we need this to complete the dashboard.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/create_absolute_dashboard.png" title="&ldquo;Create new Dashboard&rdquo;" ></p>
-
-<p>Put a label with the text <em>Client Access</em> and place it at the top of the dashboard, add a label for the first status light with the text <em>CLIENT 1</em> and then add the status light for client 1. The status light is linked to the health rule for <em>CLIENT1</em> by selecting it in the status light properties.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_first_statuslight.png" title="&ldquo;Status light properties&rdquo;" ></p>
-
-<p>We can now repeat these steps for the remaining 5 clients, linking each to the appropriate health rule, and finally the dashboard looks like this</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard.gif" title="&ldquo;All the status lights&rdquo;" ></p>
-
-<p>As mentioned at the start of the post, the Introscope status light can be in four states and the AppDynamics status light only three. To represent the fourth state we can put the value of the <em>Calls per 960 Minutes</em> metric on the status light as a dynamic label.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/metric_label_call_960.png" title="&ldquo;Metric label&rdquo;" ></p>
-
-<p>The label background is set as transparent, and sized so that it will fit on the status light for client 1. After adding a metric label for each client, the dashboard is complete. We now have a fully functional dashboard which displays the same information as the original Introscope dashboard. In fact, it shows a little more information because we added the <em>&lsquo;calls today&rsquo;</em> label on the status to make up for the missing fourth state. Knowing the number of calls for the day is much better than just having a red light meaning <em>&lsquo;some calls today but nothing in the last hour&rsquo;</em>.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard_final.gif" title="&ldquo;Completed Dashboard&rdquo;" ></p>
+<p>An example OSB application which reproduces the design of the actual application is used to illustrate the problem and solution.</p>
+
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/example_osb_proxy_service.png" title="Example Application" ></p>
+
+<h3>Finding the business transactions</h3>
+
+<p>It is a bit tricky to find the business transactions for this application because the services on Oracle OSB are all implemented by configuring the same Oracle classes. Each Proxy Service is just another instance of the same class and the call graph in the transaction snapshot is full of generic sounding names like <em>&lsquo;AssignRuntimeStep&rsquo;</em></p>
+
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/callgraph.png" title="Proxy Service call graph" ></p>
+
+<p>The first step to figuring out how to separate the business transactions is using the AppDynamics <a href="http://docs.appdynamics.com/display/PRO14S/Configure+Data+Collectors">Method Invocation Data Collector</a> feature. This gives you a way to inspect the method parameters in the call and printing their values. Method invocation data collectors allows you to configure AppDynamics to capture the value of a parameter for a particular method invocation. Not only the value of the parameter but it is possible to apply a chain of get- methods to the parameter.</p>
+
+<p>The following figure shows data collector configuration to get information out of the parameters passed to the <em>processMessage</em> method on the <em>AssignRuntimeStep</em> class we noticed in the call graph. This data collector tells AppDynamics to capture the first parameter to the <em>processMessage</em> method on the class <em>AssignRuntimeStep</em> and then to collect the result of calling <em>toString()</em> and <em>getClass().getName()</em> on that parameter.</p>
+
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/method_invocation_data_collector.png" title="Method Invocation Data Collector" ></p>
+
+<p>The results of this can be seen in the following images. The first shows the result of the <em>toString()</em> applied to the first parameter</p>
+
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/user_data1.png"></p>
+
+<p>and the second shows the class of the parameter. Notice that the class name is repeated three times. It is a list of values, one value saved for every invocation of the <em>processMessage</em> method.</p>
+
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/user_data2.png"></p>
+
+<p>From the first image it is obvious that the input message is contained in the first parameter. You can also see that the messages is stored in a map like structure and the key is called <em>body</em>. Note that the business transaction name is visible in the first image <strong>TranactionName=&ldquo;Business Transaction1&rdquo;</strong>. The second image shows the type of the first parameter so the message is contained in an object of class <em>MessageContextImpl</em>.</p>
+
+<p>The next step is to tell AppDynamics what to use for splitting the business transactions and this can be done by using a <a href="http://docs.appdynamics.com/display/PRO14S/Match+Rule+Conditions">Business Transaction Match Rule</a>. The number of characters from the start of the message to the field we are interested in are roughly <strong>126</strong> and assuming the transaction names will be around 20 characters we can set up a match rule as follows:</p>
+
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/new_bt_match_rule_1.png" title="New Business Transaction Match Rule" >
+<img class="center" src="/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_1.png" title="New Business Transaction Match Rule - Split" ></p>
+
+<p>Note the number of arguments (2) set in the above image. That value is important and the transactions will not show up at all if the wrong value is used. We determined the value by decompiling the Weblogic class but you can always do it by first trying 1 and then 2.</p>
+
+<p>With the above configuration in place the AppDynamics agent is able to pick up the different transactions. The transaction names aren&rsquo;t perfect but it works!</p>
+
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/discovered_business_transactions.png" title="Discovered business transactions" ></p>
+
+<h3>Optimise and get the correct name</h3>
+
+<p>This solution is OK, but it has a few issues. Firstly the transaction names are either cut off or include characters that are not part of the transaction name. It is also not very efficient, because it requires the entire <em>MessageContextImpl</em> instance to be serialised as a String just to extract a small part of it. To improve this we need to add custom code to the <em>MessageContextImpl</em> class so that we can access the data in a more efficient way.</p>
+
+<p>Consider the following Java code to search a string for the transaction name:</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">SEARCH_TOKEN</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">ldquo</span><span class="o">;</span><span class="n">TransactionName</span><span class="o">=</span><span class="err">\</span><span class="o">&amp;</span><span class="n">rdquo</span><span class="o">;&amp;</span><span class="n">ldquo</span><span class="o">;;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="kd">private</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">getTransactionType</span><span class="o">(</span><span class="n">String</span> <span class="n">input</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kt">int</span> <span class="n">startIndex</span> <span class="o">=</span> <span class="n">input</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">SEARCH_TOKEN</span><span class="o">);</span>
+</span><span class='line'>    <span class="kt">int</span> <span class="n">endIndex</span> <span class="o">=</span> <span class="n">startIndex</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">startIndex</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">startIndex</span> <span class="o">+=</span> <span class="n">SEARCH_TOKEN</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>            <span class="c1">//Jump to the open quote</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">startIndex</span> <span class="o">&amp;</span><span class="n">lt</span><span class="o">;</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">endIndex</span> <span class="o">=</span> <span class="n">input</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="s">&quot;\&quot;&quot;</span><span class="o">,</span> <span class="n">startIndex</span><span class="o">);</span>     <span class="c1">//Find the end quote</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">endIndex</span> <span class="o">&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">startIndex</span> <span class="o">&amp;</span><span class="n">amp</span><span class="o">;&amp;</span><span class="n">amp</span><span class="o">;</span> <span class="n">endIndex</span> <span class="o">&amp;</span><span class="n">lt</span><span class="o">;</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span><span class="o">())</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">input</span><span class="o">.</span><span class="na">substring</span><span class="o">(</span><span class="n">startIndex</span><span class="o">,</span> <span class="n">endIndex</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<p>This is a statically accessible piece of code that will extract the transaction name from an arbitrary string. It first tries to find the token in the input string. Once the token is found it determines the open and end quote positions and returns the transaction name. If nothing is found then return <em>null</em>.</p>
+
+<p>The next step is to write some Java code that can use the above code without loading the entire string into memory.
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">short</span> <span class="n">WITHIN</span> <span class="o">=</span> <span class="mi">512</span><span class="o">;</span>    <span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">short</span> <span class="n">BUFFER_SIZE</span> <span class="o">=</span> <span class="mi">256</span><span class="o">;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">getTransactionType</span><span class="o">(</span><span class="n">InputStream</span> <span class="n">inputStream</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">String</span> <span class="n">result</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>    <span class="n">BufferedReader</span> <span class="n">reader</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+</span><span class='line'>    <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">reader</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">BufferedReader</span><span class="o">(</span><span class="k">new</span> <span class="nf">InputStreamReader</span><span class="o">(</span><span class="n">inputStream</span><span class="o">),</span> <span class="n">BUFFER_SIZE</span><span class="o">);</span>
+</span><span class='line'>        <span class="kt">int</span> <span class="n">read</span><span class="o">,</span> <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">//Read up to BUFFER_SIZE and then stop</span>
+</span><span class='line'>        <span class="n">StringBuilder</span> <span class="n">sb</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">StringBuilder</span><span class="o">();</span>
+</span><span class='line'>        <span class="kt">boolean</span> <span class="n">stop</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+</span><span class='line'>        <span class="k">do</span> <span class="o">{</span>
+</span><span class='line'>            <span class="kt">char</span><span class="o">[]</span> <span class="n">cbuf</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">char</span><span class="o">[</span><span class="n">BUFFER_SIZE</span><span class="o">];</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">read</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">cbuf</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">BUFFER_SIZE</span><span class="o">);</span>
+</span><span class='line'>            <span class="k">if</span><span class="o">(</span><span class="n">read</span> <span class="o">&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>                <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">cbuf</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="c1">//Search for the transaction type in the buffer</span>
+</span><span class='line'>                <span class="n">result</span> <span class="o">=</span> <span class="n">getTransactionType</span><span class="o">(</span><span class="n">sb</span><span class="o">.</span><span class="na">toString</span><span class="o">());</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="n">total</span> <span class="o">=</span> <span class="n">total</span> <span class="o">+</span> <span class="n">read</span><span class="o">;</span>
+</span><span class='line'>                <span class="n">stop</span> <span class="o">=</span> <span class="n">stop</span> <span class="o">||</span> <span class="n">result</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">total</span> <span class="o">&amp;</span><span class="n">gt</span><span class="o">;=</span> <span class="n">WITHIN</span><span class="o">;</span>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">while</span> <span class="o">(!</span><span class="n">stop</span> <span class="o">&amp;</span><span class="n">amp</span><span class="o">;&amp;</span><span class="n">amp</span><span class="o">;</span> <span class="o">(</span><span class="n">read</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="o">));</span>
+</span><span class='line'>        <span class="n">reader</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="k">catch</span> <span class="o">(</span><span class="n">Throwable</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Logger</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">.</span><span class="na">trace</span><span class="o">(</span><span class="s">&quot;Failed: {0}&quot;</span><span class="o">,</span><span class="n">e</span><span class="o">,</span> <span class="n">e</span><span class="o">.</span><span class="na">getMessage</span><span class="o">()</span> <span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="k">finally</span> <span class="o">{</span>
+</span><span class='line'>    <span class="c1">//Omitted clean up code</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span> <span class="c1">//Something went wrong</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<p>This method accepts an <em>InputStream</em> and progressively reads it, 256 characters at a time, to find the transaction type. It is limited to search only the first 512 characters as an optimisation based on the known message structure. It will likely always find the transaction type within the first 256 characters, but 512 makes it a certainty. Also note the variables <em>WITHIN</em> and <em>BUFFER_SIZE</em>, which are there to make the code configurable and future proof.</p>
+
+<p>The code listed above can be included in a custom Java agent that will instrument the Weblogic code using a <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/instrument/package-summary.html">ClassFileTransformer</a>. Creating Java agents and class transformers are out of the scope of this article. It focuses on the bits actually injected. For more on creating a custom Java agent see the <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/instrument/package-summary.html">java.lang.instrument</a> documentation.</p>
+
+<p>The next step is making the above <em>getTransactionType</em> accessible by the AppDynamics agent.</p>
+
+<h3>Using custom byte code injection to expose internals to AppDynamics</h3>
+
+<p>Byte code injection can be achieved in different ways, one way is using the <a href="http://asm.ow2.org/">ASM library</a>. The basic idea is to inject a method into the <em>MessageContextImpl</em> class that can be accessed by AppDynamics as a getter on the first parameter of the <em>processMessage</em> method of <em>AssignRuntimeStep</em>.</p>
+
+<p>So for the agent to inject the following piece of code into the <em>MessageContextImpl</em> class,</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="kd">public</span> <span class="n">String</span> <span class="n">ec_getTransType</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Logger</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">&quot;getTransactionType called&quot;</span><span class="o">);</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">TransactionTypeExtractor</span><span class="o">.</span><span class="na">getTransactionType</span><span class="o">(</span><span class="n">getBody</span><span class="o">().</span><span class="na">getInputStream</span><span class="o">(</span><span class="kc">null</span><span class="o">));</span>
+</span><span class='line'>    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">Logger</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">&quot;Failed to get transactionType&quot;</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span> <span class="c1">// Something went wrong</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<p>you can use ASM as listed below. It effectively writes the above method into the <em>MessageContextImpl</em> class before it is loaded by the class loader. For more information on how to use ASM see the <a href="http://download.forge.objectweb.org/asm/asm4-guide.pdf">ASM User Guide</a>.</p>
+
+<p><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">MethodVisitor</span> <span class="n">mv</span> <span class="o">=</span> <span class="kd">super</span><span class="o">.</span><span class="na">visitMethod</span><span class="o">(</span><span class="n">ACC_PUBLIC</span><span class="o">,</span> <span class="s">&quot;ec_getTransType&quot;</span><span class="o">,</span> <span class="s">&quot;()Ljava/lang/String;&quot;</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
+</span><span class='line'><span class="n">mv</span><span class="o">.</span><span class="na">visitCode</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">Label</span> <span class="n">l0</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Label</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">Label</span> <span class="n">l1</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Label</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">Label</span> <span class="n">l2</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Label</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitTryCatchBlock</span><span class="o">(</span><span class="n">l0</span><span class="o">,</span> <span class="n">l1</span><span class="o">,</span> <span class="n">l2</span><span class="o">,</span> <span class="s">&quot;java/lang/Exception&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l0</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitFieldInsn</span><span class="o">(</span><span class="n">GETSTATIC</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/logging/Logger&quot;</span><span class="o">,</span> <span class="s">&quot;INSTANCE&quot;</span><span class="o">,</span> <span class="s">&quot;Lau/com/ecetera/javaagent/logging/Logger;&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLdcInsn</span><span class="o">(</span><span class="s">&quot;getTransactionType called&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ICONST_0</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitTypeInsn</span><span class="o">(</span><span class="n">ANEWARRAY</span><span class="o">,</span> <span class="s">&quot;java/lang/Object&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKEVIRTUAL</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/logging/Logger&quot;</span><span class="o">,</span> <span class="s">&quot;debug&quot;</span><span class="o">,</span> <span class="s">&quot;(Ljava/lang/String;[Ljava/lang/Object;)V&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">Label</span> <span class="n">l3</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Label</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l3</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitVarInsn</span><span class="o">(</span><span class="n">ALOAD</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKEVIRTUAL</span><span class="o">,</span> <span class="s">&quot;com/bea/wli/sb/context/MessageContextImpl&quot;</span><span class="o">,</span> <span class="s">&quot;getBody&quot;</span><span class="o">,</span> <span class="s">&quot;()Lcom/bea/wli/sb/sources/Source;&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ACONST_NULL</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKEINTERFACE</span><span class="o">,</span> <span class="s">&quot;com/bea/wli/sb/sources/Source&quot;</span><span class="o">,</span> <span class="s">&quot;getInputStream&quot;</span><span class="o">,</span> <span class="s">&quot;(Lcom/bea/wli/sb/sources/TransformOptions;)Ljava/io/InputStream;&quot;</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKESTATIC</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/vha/TransactionTypeExtractor&quot;</span><span class="o">,</span> <span class="s">&quot;getTransactionType&quot;</span><span class="o">,</span> <span class="s">&quot;(Ljava/io/InputStream;)Ljava/lang/String;&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l1</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ARETURN</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l2</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitFrame</span><span class="o">(</span><span class="n">Opcodes</span><span class="o">.</span><span class="na">F_SAME1</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="k">new</span> <span class="n">Object</span><span class="o">[]</span> <span class="o">{</span><span class="s">&quot;java/lang/Exception&quot;</span><span class="o">});</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitVarInsn</span><span class="o">(</span><span class="n">ASTORE</span><span class="o">,</span> <span class="mi">1</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">Label</span> <span class="n">l4</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Label</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l4</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitFieldInsn</span><span class="o">(</span><span class="n">GETSTATIC</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/logging/Logger&quot;</span><span class="o">,</span> <span class="s">&quot;INSTANCE&quot;</span><span class="o">,</span> <span class="s">&quot;Lau/com/ecetera/javaagent/logging/Logger;&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLdcInsn</span><span class="o">(</span><span class="s">&quot;Failed to get transactionType&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitVarInsn</span><span class="o">(</span><span class="n">ALOAD</span><span class="o">,</span> <span class="mi">1</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ICONST_0</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitTypeInsn</span><span class="o">(</span><span class="n">ANEWARRAY</span><span class="o">,</span> <span class="s">&quot;java/lang/Object&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKEVIRTUAL</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/logging/Logger&quot;</span><span class="o">,</span> <span class="s">&quot;error&quot;</span><span class="o">,</span> <span class="s">&quot;(Ljava/lang/String;Ljava/lang/Throwable;[Ljava/lang/Object;)V&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">Label</span> <span class="n">l5</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Label</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l5</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ACONST_NULL</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ARETURN</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">Label</span> <span class="n">l6</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Label</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l6</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLocalVariable</span><span class="o">(</span><span class="s">&quot;this&quot;</span><span class="o">,</span> <span class="s">&quot;Lcom/bea/wli/sb/context/MessageContextImpl;&quot;</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="n">l0</span><span class="o">,</span> <span class="n">l6</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitLocalVariable</span><span class="o">(</span><span class="s">&quot;e&quot;</span><span class="o">,</span> <span class="s">&quot;Ljava/lang/Exception;&quot;</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="n">l4</span><span class="o">,</span> <span class="n">l5</span><span class="o">,</span> <span class="mi">1</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitMaxs</span><span class="o">(</span><span class="mi">4</span><span class="o">,</span> <span class="mi">2</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">mv</span><span class="o">.</span><span class="na">visitEnd</span><span class="o">();</span>
+</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<h3>Change AppDynamics configuration</h3>
+
+<p>Now the AppDynamics agent configuration can be updated to use the new <em>ec_getTransType</em> method.</p>
+
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_2.png" title="&ldquo;Using new method to split&rdquo;" ></p>
+
+<p>The resulting business transaction names now looks much better.</p>
+
+<p><img class="center" src="/images/split_bt_on_OSB_AppD/discovered_business_transactions_2.png" title="&ldquo;Properly named transactions&rdquo;" ></p>
 
 <h3>Conclusion</h3>
 
-<p>Using the AppDynamics REST API and Standalone Machine Agent allows you to do powerful enrichment of the metric information in AppDynamics. You could, for example, monitor an internal legacy system through a custom built API and combine that data with information already captured by AppDynamics. This can then be stored as a new metric which you can use to visualise the data.</p>
+<p>With AppDynamics it is possible to get really useful information out of a running application. It has very flexible configuration, which allows you to really dive deep into the application internals to find issues and separate transactions. However, sometimes it is better to give AppDynamics a hook into the internal information so that it can work more efficiently. When you have access to the application code then this can easily be achieved by adding some code. When it is not practical to rebuild the entire application then you can always use byte code injection.</p>
+
+<p><a href="#references"></a></p>
 ]]></content>
   </entry>
   
