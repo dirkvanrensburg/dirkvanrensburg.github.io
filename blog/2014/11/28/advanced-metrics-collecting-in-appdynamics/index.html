@@ -1,24 +1,91 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: Appdynamics, | Ideas, Solutions, Work in progress]]></title>
-  <link href="http://dirkvanrensburg.github.io/blog/categories/appdynamics/atom.xml" rel="self"/>
-  <link href="http://dirkvanrensburg.github.io/"/>
-  <updated>2014-12-10T15:29:11+11:00</updated>
-  <id>http://dirkvanrensburg.github.io/</id>
-  <author>
-    <name><![CDATA[Dirk van Rensburg]]></name>
-    
-  </author>
-  <generator uri="http://octopress.org/">Octopress</generator>
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Extending Metrics for Complex Dashboards in AppDynamics - Ideas, Solutions, Work in progress</title>
+  <meta name="author" content="Dirk van Rensburg">
 
   
-  <entry>
-    <title type="html"><![CDATA[Extending Metrics for Complex Dashboards in AppDynamics]]></title>
-    <link href="http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/"/>
-    <updated>2014-11-28T15:16:35+11:00</updated>
-    <id>http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics</id>
-    <content type="html"><![CDATA[<h3>Overview</h3>
+  <meta name="description" content="Overview A couple of month ago at work, I was tasked to replicate one of our client&rsquo;s Wily Introscope dashboards in AppDynamics. The Wily &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ideas, Solutions, Work in progress" type="application/atom+xml">
+  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ideas, Solutions, Work in progress</a></h1>
+  
+    <h2>and other things</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:dirkvanrensburg.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Extending Metrics for Complex Dashboards in AppDynamics</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2014-11-28T15:16:35+11:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>3:16 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h3>Overview</h3>
 
 <p>A couple of month ago at <a href="http://www.ecetera.com.au" title="Ecetera">work</a>, I was tasked to replicate one of our client&rsquo;s <a href="http://www.ca.com/us/opscenter/ca-application-performance-management.aspx" title="CA Application Performance Management">Wily Introscope</a> dashboards in <a href="http://www.appdynamics.com" title="AppDynamics">AppDynamics</a>. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application.</p>
 
@@ -108,11 +175,11 @@ The data for each light was gathered by Introscope using custom instrumentation 
 
 <p>The AppDynamics controller provides a <a href="https://docs.appdynamics.com/display/PRO39/Use+the+AppDynamics+REST+API" title="AppDynamics REST API">REST API</a>, which enables you to programmatically extract information out of the controller and, in the case of configuration, send information to the controller. This means that we can call the controller to get the metric information of the information points we just configured. The URL to an information point metric can be retrieved from the metric browser. Right click on the information point and the metric you are interested in, <em>Calls per Minute</em> in our case, and select <em>Copy REST URL</em></p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/get_rest_url.png" title="&ldquo;Rest URL from metric browser&rdquo;" ></p>
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/get_rest_url.png" title="&#34;Rest URL from metric browser&#34;" alt="&#34;Rest URL from metric browser&#34;"></p>
 
 <p>This will copy the URL to the clipboard and you can test it by pasting it into a new tab in your web browser. You should see something like this</p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/rest_results_example.png" title="&ldquo;Example REST results&rdquo;" ></p>
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/rest_results_example.png" title="&#34;Example REST results&#34;" alt="&#34;Example REST results&#34;"></p>
 
 <p>The URL can be changed to get the information over different time ranges by changing the <em>time-range-type</em> and <em>duration-in-mins</em> fields. The <em>time-range-type</em> field is used to get information relative to a point in time, so for example it can be used to get information for the last 15 minutes or for the 30 minutes after 10 am this morning. We can use this to get the information we are after out of AppDynamics. We can get the number of times each client called the service in the last 10, 60 or 960 minutes by changing these fields and calling the controller.</p>
 
@@ -157,7 +224,7 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
 
 <p>There will be a section for each client (<strong>CLIENT1</strong> to <strong>CLIENTx</strong>) and each will have a metric for each of the time ranges we are interested in (10, 60 and 960 minutes)</p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/new_metrics_in_browser.png" title="&ldquo;The new metrics displayed in the browser&rdquo;" ></p>
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/new_metrics_in_browser.png" title="&#34;The new metrics displayed in the browser&#34;" alt="&#34;The new metrics displayed in the browser&#34;"></p>
 
 <h3>Health Rules</h3>
 
@@ -171,44 +238,148 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
 <p>First specify a name for the rule, the type of metric we will use and the time range to use when evaluating the health rule. The last 5 minutes is good enough since the machine agent will send a value every minute and the value it sends is already summed over the period in question.</p>
 
 <p>We need to create one health rule for every client
-<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_step1.png" title="&ldquo;Create the health rule&rdquo;" ></p>
+<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_step1.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
 
 <p>The WARNING condition is raised if there were no calls in the last 10 minutes, but some in the last 60 minutes.
-<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_warning.png" title="&ldquo;Create the health rule&rdquo;" ></p>
+<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_warning.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
 
 <p>The CRITICAL condition is raised if there were no calls in the last 60 minutes.
-<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_critical.png" title="&ldquo;Create the health rule&rdquo;" ></p>
+<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_critical.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
 
 <h3>Putting it all together</h3>
 
 <p>Now we have all the information we need to start assembling the dashboard. Status lights only work on <em>Custom Dashboard</em> as opposed to <em>Node/Tier Dashboards</em>. To create a <em>Custom Dashboard</em> we click on the AppDynamics logo at the left top an choose <em>Custom Dashboards</em></p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/select_custom_dashboards.png" title="&ldquo;Create Custom Dashboard&rdquo;" ></p>
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/select_custom_dashboards.png" title="&#34;Create Custom Dashboard&#34;" alt="&#34;Create Custom Dashboard&#34;"></p>
 
 <p>Next we create a new dashboard by clicking on the <em>Create Dashboad</em> and set the layout of the canvas to <strong>absolute</strong>. This is because the grid layout does not support metric labels on top of other widgets and we need this to complete the dashboard.</p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/create_absolute_dashboard.png" title="&ldquo;Create new Dashboard&rdquo;" ></p>
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/create_absolute_dashboard.png" title="&#34;Create new Dashboard&#34;" alt="&#34;Create new Dashboard&#34;"></p>
 
 <p>Put a label with the text <em>Client Access</em> and place it at the top of the dashboard, add a label for the first status light with the text <em>CLIENT 1</em> and then add the status light for client 1. The status light is linked to the health rule for <em>CLIENT1</em> by selecting it in the status light properties.</p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_first_statuslight.png" title="&ldquo;Status light properties&rdquo;" ></p>
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_first_statuslight.png" title="&#34;Status light properties&#34;" alt="&#34;Status light properties&#34;"></p>
 
 <p>We can now repeat these steps for the remaining 5 clients, linking each to the appropriate health rule, and finally the dashboard looks like this</p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard.gif" title="&ldquo;All the status lights&rdquo;" ></p>
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard.gif" title="&#34;All the status lights&#34;" alt="&#34;All the status lights&#34;"></p>
 
 <p>As mentioned at the start of the post, the Introscope status light can be in four states and the AppDynamics status light only three. To represent the fourth state we can put the value of the <em>Calls per 960 Minutes</em> metric on the status light as a dynamic label.</p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/metric_label_call_960.png" title="&ldquo;Metric label&rdquo;" ></p>
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/metric_label_call_960.png" title="&#34;Metric label&#34;" alt="&#34;Metric label&#34;"></p>
 
 <p>The label background is set as transparent, and sized so that it will fit on the status light for client 1. After adding a metric label for each client, the dashboard is complete. We now have a fully functional dashboard which displays the same information as the original Introscope dashboard. In fact, it shows a little more information because we added the <em>&lsquo;calls today&rsquo;</em> label on the status to make up for the missing fourth state. Knowing the number of calls for the day is much better than just having a red light meaning <em>&lsquo;some calls today but nothing in the last hour&rsquo;</em>.</p>
 
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard_final.gif" title="&ldquo;Completed Dashboard&rdquo;" ></p>
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard_final.gif" title="&#34;Completed Dashboard&#34;" alt="&#34;Completed Dashboard&#34;"></p>
 
 <h3>Conclusion</h3>
 
 <p>Using the AppDynamics REST API and Standalone Machine Agent allows you to do powerful enrichment of the metric information in AppDynamics. You could, for example, monitor an internal legacy system through a custom built API and combine that data with information already captured by AppDynamics. This can then be stored as a new metric which you can use to visualise the data.</p>
-]]></content>
-  </entry>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
   
-</feed>
+
+<span class="byline author vcard">Posted by <span class="fn">Dirk van Rensburg</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2014-11-28T15:16:35+11:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>3:16 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/advanced/'>advanced</a>, <a class='category' href='/blog/categories/apm/'>apm,</a>, <a class='category' href='/blog/categories/appdynamics/'>appdynamics,</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/" data-via="" data-counturl="http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/" title="Previous Post: Split Business Transactions on Oracle Service Bus using AppDynamics">&laquo; Split Business Transactions on Oracle Service Bus using AppDynamics</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>About Me</h1>
+  <p>A little something about me.</p>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/">Extending Metrics for Complex Dashboards in AppDynamics</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/">Split Business Transactions on Oracle Service Bus Using AppDynamics</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Dirk van Rensburg -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

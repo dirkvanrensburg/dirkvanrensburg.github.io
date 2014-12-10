@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: Appdynamics, | Ideas, Solutions, Work in progress]]></title>
-  <link href="http://dirkvanrensburg.github.io/blog/categories/appdynamics/atom.xml" rel="self"/>
+  <title><![CDATA[Category: Advanced | Ideas, Solutions, Work in progress]]></title>
+  <link href="http://dirkvanrensburg.github.io/blog/categories/advanced/atom.xml" rel="self"/>
   <link href="http://dirkvanrensburg.github.io/"/>
   <updated>2014-12-10T15:29:11+11:00</updated>
   <id>http://dirkvanrensburg.github.io/</id>
