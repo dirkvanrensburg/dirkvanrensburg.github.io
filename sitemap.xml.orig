@@ -1,51 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+<<<<<<< HEAD
     <loc>http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/</loc>
-    <lastmod>2014-11-28T15:16:35+11:00</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://dirk.kirko.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/</loc>
-    <lastmod>2014-06-23T00:00:00+10:00</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://dirk.kirko.io/</loc>
-    <lastmod>2017-01-17T16:31:01+11:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>http://dirk.kirko.io/blog/archives/</loc>
-    <lastmod>2017-01-17T16:31:01+11:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-</urlset>
+=======
     <loc>http://dirkvanrensburg.github.io/blog/2015/12/18/map-to-string-and-back/</loc>
     <lastmod>2015-12-18T15:27:52+11:00</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/</loc>
+>>>>>>> 1c3421502eb37c1da108c0ac38332d18ad257f42
     <lastmod>2014-11-28T15:16:35+11:00</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
+<<<<<<< HEAD
+    <loc>http://dirk.kirko.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/</loc>
+=======
     <loc>http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/</loc>
+>>>>>>> 1c3421502eb37c1da108c0ac38332d18ad257f42
     <lastmod>2014-06-23T00:00:00+10:00</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
+<<<<<<< HEAD
+    <loc>http://dirk.kirko.io/</loc>
+    <lastmod>2017-01-17T16:31:01+11:00</lastmod>
+=======
     <loc>http://dirkvanrensburg.github.io/</loc>
     <lastmod>2017-01-17T16:07:01+11:00</lastmod>
+>>>>>>> 1c3421502eb37c1da108c0ac38332d18ad257f42
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
+<<<<<<< HEAD
+    <loc>http://dirk.kirko.io/blog/archives/</loc>
+    <lastmod>2017-01-17T16:31:01+11:00</lastmod>
+=======
     <loc>http://dirkvanrensburg.github.io/blog/archives/</loc>
     <lastmod>2017-01-17T16:07:01+11:00</lastmod>
+>>>>>>> 1c3421502eb37c1da108c0ac38332d18ad257f42
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>

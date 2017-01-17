@@ -1,5 +1,8 @@
 User-agent: *
 Disallow: 
 
+<<<<<<< HEAD
 Sitemap: http://dirk.kirko.io/sitemap.xml 
+=======
 Sitemap: http://dirkvanrensburg.github.io/sitemap.xml 
+>>>>>>> 1c3421502eb37c1da108c0ac38332d18ad257f42
