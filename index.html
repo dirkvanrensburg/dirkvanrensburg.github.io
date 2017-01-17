@@ -9,7 +9,7 @@
   <meta name="author" content="Dirk van Rensburg">
 
   
-  <meta name="description" content="Overview A couple of month ago at work, I was tasked to replicate one of our client&rsquo;s Wily Introscope dashboards in AppDynamics. The Wily &hellip;">
+  <meta name="description" content="`ramsRex = &ldquo;&rdquo;&ldquo;(([^)]+))&rdquo;&ldquo;&rdquo;.r val params = Map(&ldquo;a&rdquo; -> 1, &ldquo;b&rdquo; -> 2).toString // Turn a &hellip;&#8221;>
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -66,6 +66,103 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/12/18/map-to-string-and-back/">Map to String and Back</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2015-12-18T15:27:52+11:00'><span class='date'><span class='date-month'>Dec</span> <span class='date-day'>18</span><span class='date-suffix'>th</span>, <span class='date-year'>2015</span></span> <span class='time'>3:27 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>`ramsRex = &ldquo;&rdquo;&ldquo;(([^)]+))&rdquo;&ldquo;&rdquo;.r
+    val params = Map(&ldquo;a&rdquo; -> 1, &ldquo;b&rdquo; -> 2).toString</p>
+
+<pre><code>// Turn a string Map(a -&gt; 1, b -&gt; 2) into a Map object
+val paramMap = paramsRex.findFirstMatchIn(params).map { mtch =&gt;
+  mtch.group(1).split(", ").map { entry =&gt;
+    val kv = entry.split(" -&gt; ")
+    (kv(0), kv(1))
+  }
+} getOrElse(Array()) toMap
+
+
+val OLDOONE = paramsRex.findFirstMatchIn(params).map { mtch =&gt;
+    val entries = mtch.group(1).split(", ")
+    entries.map { e =&gt;
+      val kv = e.split(" -&gt; ")
+      (kv(0), kv(1))
+    }
+  } getOrElse(Array()) toMap
+
+//
+//    //flatmap - map - map
+val z = paramsRex.findFirstMatchIn(params).flatMap { mtch =&gt;
+  Option(mtch.group(1).split(", "))
+} map{ entryArr =&gt;
+  entryArr.map { e =&gt;
+    val kv = e.split(" -&gt; ")
+
+    (kv(0), kv(1))
+  }
+}
+
+
+//For comprehension 1
+val x = {
+  for {
+    mtch &lt;- paramsRex.findFirstMatchIn(params)
+    entryArr &lt;- Option(mtch.group(1).split(", "))
+  } yield {
+    entryArr.map { entry =&gt;
+      val kv = entry.split(" -&gt; ")
+
+      (kv(0), kv(1))
+    }
+  }
+}
+
+//For comprehension 2
+val zx = {
+  paramsRex.findFirstMatchIn(params).map { mtch =&gt;
+    for {
+      entry &lt;- mtch.group(1).split(", ")
+      kv = entry.split(" -&gt; ")
+    } yield {
+      (kv(0), kv(1))
+    }
+  }
+}
+
+//Interative - More efficient??
+val res = scala.collection.mutable.HashMap[String, String]()
+paramsRex.findFirstMatchIn(params).map { mtch =&gt;
+  mtch.group(1).split(", ").foreach { entry =&gt;
+      val kv = entry.split(" -&gt; ")
+      res.put(kv(0), kv(1))
+    }
+  }
+val xx = res.toMaprequire': cannot load such file -- mkmf (LoadError)dd
+</code></pre>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -646,6 +743,10 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/12/18/map-to-string-and-back/">Map to String and Back</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/">Extending Metrics for Complex Dashboards in AppDynamics</a>
       </li>
     
@@ -666,7 +767,7 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Dirk van Rensburg -
+  Copyright &copy; 2017 - Dirk van Rensburg -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
