@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: Byte Code Injection | Ideas, Solutions, Work in progress]]></title>
-  <link href="http://dirkvanrensburg.github.io/blog/categories/byte-code-injection/atom.xml" rel="self"/>
-  <link href="http://dirkvanrensburg.github.io/"/>
-  <updated>2017-01-17T16:07:01+11:00</updated>
-  <id>http://dirkvanrensburg.github.io/</id>
+  <link href="http://dirk.kirko.io/blog/categories/byte-code-injection/atom.xml" rel="self"/>
+  <link href="http://dirk.kirko.io/"/>
+  <updated>2017-01-17T16:26:54+11:00</updated>
+  <id>http://dirk.kirko.io/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Split Business Transactions on Oracle Service Bus Using AppDynamics]]></title>
-    <link href="http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/"/>
+    <link href="http://dirk.kirko.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/"/>
     <updated>2014-06-23T00:00:00+10:00</updated>
-    <id>http://dirkvanrensburg.github.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics</id>
+    <id>http://dirk.kirko.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics</id>
     <content type="html"><![CDATA[<h3>Overview</h3>
 
 <p><a href="http://www.ecetera.com.au">We</a> recently helped a customer configure AppDynamics to monitor their business transactions on <a href="http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html">Oracle OSB</a>. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky.</p>

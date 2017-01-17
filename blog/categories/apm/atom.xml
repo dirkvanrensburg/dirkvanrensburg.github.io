@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: Apm, | Ideas, Solutions, Work in progress]]></title>
-  <link href="http://dirkvanrensburg.github.io/blog/categories/apm/atom.xml" rel="self"/>
-  <link href="http://dirkvanrensburg.github.io/"/>
-  <updated>2017-01-17T16:07:01+11:00</updated>
-  <id>http://dirkvanrensburg.github.io/</id>
+  <link href="http://dirk.kirko.io/blog/categories/apm/atom.xml" rel="self"/>
+  <link href="http://dirk.kirko.io/"/>
+  <updated>2017-01-17T16:26:54+11:00</updated>
+  <id>http://dirk.kirko.io/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Extending Metrics for Complex Dashboards in AppDynamics]]></title>
-    <link href="http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/"/>
+    <link href="http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/"/>
     <updated>2014-11-28T15:16:35+11:00</updated>
-    <id>http://dirkvanrensburg.github.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics</id>
+    <id>http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics</id>
     <content type="html"><![CDATA[<h3>Overview</h3>
 
 <p>A couple of month ago at <a href="http://www.ecetera.com.au" title="Ecetera">work</a>, I was tasked to replicate one of our client&rsquo;s <a href="http://www.ca.com/us/opscenter/ca-application-performance-management.aspx" title="CA Application Performance Management">Wily Introscope</a> dashboards in <a href="http://www.appdynamics.com" title="AppDynamics">AppDynamics</a>. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application.</p>
