@@ -1,0 +1,354 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Java Double, NaN Weirdness - Ideas, Solutions, Work in progress</title>
+  <meta name="author" content="Dirk van Rensburg">
+
+  
+  <meta name="description" content="It is true that we learn something everyday. We don&rsquo;t always realise it but we do. It is striking when the learning is more of a realisation of &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://dirk.kirko.io/blog/2017/01/11/java-double-and-nan">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ideas, Solutions, Work in progress" type="application/atom+xml">
+  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ideas, Solutions, Work in progress</a></h1>
+  
+    <h2>and other things</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:dirk.kirko.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Java Double, NaN Weirdness</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-01-11T12:08:52+11:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>11</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>12:08 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>It is true that we learn something everyday. We don&rsquo;t always realise it but we do. It is striking when the learning is more of a realisation of
+something you sort of knew but never really thought about too much. Something you thought you understood, until now.</p>
+
+<p>When using Java I tend to stick with good old <code>java.math.BigDecimal</code> when working with floating point numbers. BigDecimal is immutable
+which makes it nice to work with, but the most important thing is precision. You have absolute control over number precision, without the rounding or overflow surprises you get with <code>double</code> and <code>float</code>.</p>
+
+<h2>IEEE 754-1985</h2>
+
+<p>Both Java&rsquo;s <code>float</code> and <code>double</code> types follow the <a href="https://en.wikipedia.org/wiki/IEEE_754-1985">IEEE 754-1985</a> standard for representing floating point numbers. I am not going to go into great detail on the internals of <code>double</code> in this post, but it suffice to say that <code>double</code> and <code>float</code> are not perfectly accurate when you use them to perform arithmetic. The Java <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html">primitive type documentation</a> says:</p>
+
+<blockquote><p>This data type should never be used for precise values, such as currency. For that,
+  you will need to use the java.math.BigDecimal class instead.</p></blockquote>
+
+<h2>The story</h2>
+
+<p>I recently worked on an integration project and received a bug report on one of my services. The report said that my service is returning an HTTP code &lsquo;500&rsquo; for a specific input message.</p>
+
+<p>During my investigation I found the cause of the exception to be an unexpected value returned from a down stream service. It was a SOAP service which returned something like the following in its XML response:</p>
+
+<pre><code>&lt;SomeNumberField type="number"&gt;NaN&lt;/SomeNumberField&gt;
+</code></pre>
+
+<p>I was a bit surprised to see the <code>NaN</code> there since I would expect them to either leave the field off or set it to <code>null</code> if they don&rsquo;t have a value. This looked like a calculation bug since we all know that, in Java and C# at least, dividing a double with 0 results in a <code>NaN</code>. (<em>Spoiler: It doesn&rsquo;t</em>)</p>
+
+<p>However, this got me thinking and I tried to remember what I know about <code>double</code>and <code>NaN</code>. This resulted in an embarrisingly deep spiral down the rabbit hole.</p>
+
+<h2>NaN</h2>
+
+<p>Well if you think about it <code>NaN</code> is kind of like a number in this case, even though NaN means Not-a-Number. It exists to enable calculations with indeterminate results to be represented as a &ldquo;number&rdquo; in the set of valid <code>double</code> values. Without <code>NaN</code> you could get completely wrong results or you&rsquo;ll get an exception, which isn&rsquo;t ideal either. <code>NaN</code> is defined same as <code>Infinity</code> to be part of the set of valid doubles.</p>
+
+<pre><code>System.out.println("NaN is a NaN!: " + Double.isNaN(Double.NaN)); //NaN is a NaN!: true
+System.out.println(Double.POSITIVE_INFINITY == Double.POSITIVE_INFINITY); //true
+System.out.println(Double.NEGATIVE_INFINITY == Double.NEGATIVE_INFINITY); //true
+</code></pre>
+
+<p>I played around with <code>double</code> a bit and I discovered a couple of things and I thought to share it in a post, because I think the various edge cases of <code>double</code> are interesting.</p>
+
+<p>I started with the following experiment:</p>
+
+<pre><code>//Lets make a NaN!
+double NaN = 5.0/0;
+System.out.println("NaN: " + NaN);
+
+&gt;&gt; NaN: Infinity
+</code></pre>
+
+<p><strong>Wait. What?</strong></p>
+
+<p>Turns out that I have lived with this misconception about what happens when you divide a double by zero. I seriously expected that a <code>double</code> divided by 0 is <code>NaN</code>. Well it turns out I was wrong. You get:</p>
+
+<blockquote><p>POSITIVE_INFINITY</p></blockquote>
+
+<pre><code>double infinity = 5.0/0;
+System.out.println("Is positive infinity: " + (infinity == Double.POSITIVE_INFINITY)); //true
+</code></pre>
+
+<p>I can sort of rationalise that the answer could be infinity because you are dividing something largish with something much much smaller. In fact dividing it by nothing so you could argue the result of that should be infitely large. Although, mathematically this does not make any sense. x/0 is undefined since there is no number that you can multiply with 0 to get back to x again.</p>
+
+<blockquote><p>For x/0 there is no number you can multiply 0 to yield x for x &lt;> 0</p></blockquote>
+
+<p>The reason Java does it this way is because it adheres to the <a href="https://en.wikipedia.org/wiki/IEEE_754-1985">IEEE 754</a> standard.</p>
+
+<p>Anyway lets play with <code>NaN</code> a bit.</p>
+
+<pre><code>double NaN = Double.NaN;
+System.out.println("NaN: " + NaN); //NaN: NaN
+
+System.out.println("(NaN + 10): " + (NaN + 10)); //(NaN + 10): NaN
+System.out.println("(NaN - 10): " + (NaN - 10)); //(NaN - 10): NaN
+System.out.println("NaN - NaN: " + (NaN - NaN)); //NaN - NaN: NaN
+System.out.println("NaN / 0: " + (NaN / 0));     //NaN / 0: NaN
+System.out.println("NaN * 0: " + (NaN * 0));     //NaN * 0: NaN
+</code></pre>
+
+<p>Well no surprises here. Once a NaN always a NaN.</p>
+
+<blockquote><p>I used <code>Double.NaN</code> above to be sure I have a <code>NaN</code> but if you want to make one yourself then calculating the square root of a negative number is an easy way:</p></blockquote>
+
+<pre><code>System.out.println("Home made NaN: " + (Math.sqrt(-1))); //Home made NaN: NaN
+</code></pre>
+
+<h2>Max and Min value</h2>
+
+<p>Before we get to infinity let take a quick look at <code>Double.MAX_VALUE</code> and <code>Double.MIN_VALUE</code>. These are special constant defined on <code>Double</code> which you can use to check if a number is at the maximum of what a double can represent. If a number is equal to <code>Double.MAX_VALUE</code> it means that it is about to overflow into <code>Double.POSITIVE_INFINITY</code>. The same goes for <code>Double.MIN_VALUE</code> except that it will overflow to <code>Double.NEGATIVE_INFINITY</code>.</p>
+
+<p>Something to note about <code>double</code> is that it can represent ridiculously large numbers using a measly 64 bits. The maximum value is larger than <code>1.7*10^308</code> !</p>
+
+<pre><code>System.out.println("Double.MAX_VALUE is large! : " + (Double.MAX_VALUE == 1.7976931348623157 * Math.pow(10,308)));
+
+&gt; Double.MAX_VALUE is large! : true
+</code></pre>
+
+<p>It can represent these large numbers because it encodes numbers as a small real number multiplied by some exponent. See the <a href="https://en.wikipedia.org/wiki/IEEE_754-1985">IEEE spec</a></p>
+
+<p>Let&rsquo;s see what it takes to make <code>Double.MAX_VALUE</code> overflow to infinity.</p>
+
+<pre><code>double max = Double.MAX_VALUE;
+
+System.out.println("MAX == (MAX + 1): " + (max == (max + 1))); //true
+System.out.println("MAX == (MAX + 1000): " + (max == (max + 1000))); //true
+System.out.println("EVEN...");
+System.out.println("MAX == (MAX + 10^291: " + (max == (max + Math.pow(10,291)))); //true
+
+System.out.println("HOWEVER...");
+System.out.println("MAX == (MAX + 10^292): " + (max == (max + Math.pow(10,292)))); //false
+System.out.println("(MAX + 10^292): " + (max + Math.pow(10,292))); //Infinity
+</code></pre>
+
+<p>This ability of representing seriously large numbers comes at a price of accuracy. After a while only changes in the most significant parts of the number can be reflected. As seen in the following code snippet:</p>
+
+<pre><code>double large_num = Math.pow(10,200);
+System.out.println("large_num == (large_num + 1000): " + (large_num == (large_num + 1000))); //true
+</code></pre>
+
+<p>At large integer values the steps between numbers are very very large since the double has no place to record the change if it doesn&rsquo;t affect its most 16 most significant digits. As shown above 1000 plus a very large number is still that same very large number.</p>
+
+<h2>Infinity</h2>
+
+<p>Java&rsquo;s <code>double</code> supports two kinds of infinity. Positive and negative inifity. The easiest to make those are by dividing by 0.</p>
+
+<pre><code>double pos_infinity = 5.0/0;
+System.out.println("POSITIVE_INFINITY == pos_infinity: " + (Double.POSITIVE_INFINITY == pos_infinity));
+
+double neg_infinity = -5.0/0;
+System.out.println("NEGATIVE_INFINITY == neg_infinity: " + (Double.NEGATIVE_INFINITY == neg_infinity));
+</code></pre>
+
+<p>In maths infinity is a numerical concept representing the idea of an infinitly large number. It is used, for example in calculus, to describe an <a href="http://khanacademy.wikia.com/wiki/Limits_at_infinity_where_x_is_unbounded">unbounded limit</a> - some number that can grow without bound.</p>
+
+<p>In this case things are pretty much the same as in maths, where POSITIVE_INFINITY and NEGATIVE_INFINITY are used to represent numbers that
+are infinitely large. However they function more as a way to know something when wrong in your calculation. Either you are trying to calculate something that is too large to store in a double or there is some bug in the code.</p>
+
+<p>There are once again some interesting things to note when playing with positive and negative infinity.</p>
+
+<pre><code>double pos = Double.POSITIVE_INFINITY;
+
+System.out.println("POSITIVE_INFINITY + 1000 = " + (pos + 1000));
+System.out.println("POSITIVE_INFINITY + 10^1000 = " + (pos + Math.pow(10,1000)));
+System.out.println("POSTIVE_INFINITY * 2 = " + (pos * 2));
+</code></pre>
+
+<p>Once the value is infinity it stays there even if you add or substract rediculously large numbers. However there is one interesting case, when you substract infinity from infinity:</p>
+
+<pre><code>double pos = Double.POSITIVE_INFINITY;
+double neg = Double.NEGATIVE_INFINITY;
+
+System.out.println("POSITIVE_INFINITY - POSITIVE_INFINITY = " + (pos - pos));
+System.out.println("POSITIVE_INFINITY + NEGATIVE_INFINITY = " + (pos + neg));
+</code></pre>
+
+<p>And as you would expect adding or subtracting <code>NaN</code> yields a <code>NaN</code></p>
+
+<pre><code>System.out.println("POSTIVE_INFINITY + NaN" + (pos + Double.NaN));
+System.out.println("POSTIVE_INFINITY - NaN" + (pos - Double.NaN));
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Dirk van Rensburg</span></span>
+
+      
+
+
+
+
+<time class='entry-date' datetime='2017-01-11T12:08:52+11:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>11</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>12:08 pm</span></time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/java/'>java</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://dirk.kirko.io/blog/2017/01/11/java-double-and-nan/" data-via="" data-counturl="http://dirk.kirko.io/blog/2017/01/11/java-double-and-nan/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/" title="Previous Post: Extending Metrics for Complex Dashboards in AppDynamics">&laquo; Extending Metrics for Complex Dashboards in AppDynamics</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>About Me</h1>
+  <p>A little something about me.</p>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2017/01/11/java-double-and-nan/">Java Double, NaN Weirdness</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/">Extending Metrics for Complex Dashboards in AppDynamics</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/">Split Business Transactions on Oracle Service Bus Using AppDynamics</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2017 - Dirk van Rensburg -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
