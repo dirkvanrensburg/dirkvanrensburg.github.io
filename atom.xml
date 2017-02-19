@@ -4,7 +4,7 @@
   <title><![CDATA[Ideas, Solutions, Work in progress]]></title>
   <link href="http://dirk.kirko.io/atom.xml" rel="self"/>
   <link href="http://dirk.kirko.io/"/>
-  <updated>2017-02-17T16:34:25+11:00</updated>
+  <updated>2017-02-20T09:19:24+11:00</updated>
   <id>http://dirk.kirko.io/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
@@ -139,7 +139,7 @@ passing the <code>-Dhazelcast.config</code> system property when starting the se
 whenever the application context sees that:</p>
 
 <ol>
-<li> <code>HazelcastInstance</code> is on the classpath</li>
+<li><code>HazelcastInstance</code> is on the classpath</li>
 <li>There is an unresolved dependency on a bean of type <code>HazelcastInstance</code></li>
 </ol>
 

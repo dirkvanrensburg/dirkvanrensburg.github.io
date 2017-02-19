@@ -1,35 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>http://dirk.kirko.io/blog/2017/02/17/a-run-around-with-hazelcast/</loc>
-    <lastmod>2017-02-17T08:09:39+11:00</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://dirk.kirko.io/blog/2017/01/11/java-double-and-nan/</loc>
-    <lastmod>2017-01-11T12:08:52+11:00</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/</loc>
-    <lastmod>2014-11-28T15:16:35+11:00</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://dirk.kirko.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/</loc>
-    <lastmod>2014-06-23T00:00:00+10:00</lastmod>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>http://dirk.kirko.io/</loc>
-    <lastmod>2017-02-17T16:34:25+11:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>http://dirk.kirko.io/blog/archives/</loc>
-    <lastmod>2017-02-17T16:34:25+11:00</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
+<url>
+<loc>http://dirk.kirko.io/blog/2017/02/17/a-run-around-with-hazelcast/</loc>
+<lastmod>2017-02-17T08:09:39+11:00</lastmod>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/2017/01/11/java-double-and-nan/</loc>
+<lastmod>2017-01-11T12:08:52+11:00</lastmod>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/</loc>
+<lastmod>2014-11-28T15:16:35+11:00</lastmod>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/2014/06/23/split-business-transactions-on-oracle-osb-using-appdynamics/</loc>
+<lastmod>2014-06-23T00:00:00+10:00</lastmod>
+</url>
+<url>
+<loc>http://dirk.kirko.io/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/archives/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/oracle-osb/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/appdynamics/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/apm/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/java/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/byte-code-injection/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/appdynamics/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/apm/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/advanced/</loc>
+</url>
 </urlset>
