@@ -46,4 +46,13 @@
 <url>
 <loc>http://dirk.kirko.io/blog/categories/advanced/</loc>
 </url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/hazelcast/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/spring-boot/</loc>
+</url>
+<url>
+<loc>http://dirk.kirko.io/blog/categories/jcache/</loc>
+</url>
 </urlset>

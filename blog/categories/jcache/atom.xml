@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Jcache, | Ideas, Solutions, Work in progress]]></title>
+  <link href="http://dirk.kirko.io/blog/categories/jcache/atom.xml" rel="self"/>
+  <link href="http://dirk.kirko.io/"/>
+  <updated>2017-03-03T09:41:12+11:00</updated>
+  <id>http://dirk.kirko.io/</id>
+  <author>
+    <name><![CDATA[Dirk van Rensburg]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Hazelcast, JCache and Spring Boot]]></title>
+    <link href="http://dirk.kirko.io/blog/2017/02/17/a-run-around-with-hazelcast/"/>
+    <updated>2017-02-17T08:09:39+11:00</updated>
+    <id>http://dirk.kirko.io/blog/2017/02/17/a-run-around-with-hazelcast</id>
+    <content type="html"><![CDATA[<p><a href="https://hazelcast.com/">Hazelcast</a> is an in memory data grid which enables data sharing between nodes in a server cluster along with a full set of other data grid features. It also
+implements the <a href="https://jcp.org/aboutJava/communityprocess/final/jsr107/index.html">JCache (JSR107)</a> caching standard so it is ideal for building a data aggregation service.</p>
+
+<p>In this post I&rsquo;ll go through the motions of adding Hazelcast to a Spring Boot REST application and resolving the issues until we have a functioning REST service
+with its response cached in Hazelcast via JCache annotations.</p>
+
+<blockquote><p><small><strong>TLDR;</strong> I suggest reading the post to understand the eventual solution, but if you are impatient see the solution on github:
+<br/>
+* <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache">hazelcast-jcache option 1 and 2</a>
+and<br/>
+* <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3">hazelcast-jcache option 3</a></small></p></blockquote>
+
+<h3>Versions</h3>
+
+<table>
+<thead>
+<tr>
+<th>Dependency  </th>
+<th> Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Spring Boot </td>
+<td> 1.5.1</td>
+</tr>
+<tr>
+<td>Hazelcast   </td>
+<td> 3.7.5</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p>
+
+<h3>Spring boot REST</h3>
+
+<p>I am going to assume a working knowledge of building REST services using Spring Boot so I won&rsquo;t be going into too much detail here. Building a REST service in Spring is really easy and
+ a quick Google will bring up a couple of tutorials on the subject.</p>
+
+<p>This post will build on top of a basic REST app found on <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/master">github</a>. If you clone that you should be able to
+follow along.</p>
+
+<h3>Adding Hazelcast</h3>
+
+<p>To add Hazelcast to an existing Spring Boot project is very easy. All you have to do is add a dependency on Hazelcast, provide Hazelcast configuration and start using it.</p>
+
+<h4>Step 1</h4>
+
+<p>For maven add the following dependencies to your project <code>pom.xml</code> file:</p>
+
+<pre><code class="XML Hazelcast dependencies in pom file">         &lt;dependency&gt;
+            &lt;groupId&gt;com.hazelcast&lt;/groupId&gt;
+            &lt;artifactId&gt;hazelcast&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.hazelcast&lt;/groupId&gt;
+            &lt;artifactId&gt;hazelcast-spring&lt;/artifactId&gt;
+            &lt;version&gt;${hazelcast.version}&lt;/version&gt;
+        &lt;/dependency&gt;
+</code></pre>
+
+<h4>Step 2</h4>
+
+<p>I left the following Hazelcast configuration empty to keep things simple for now. Hazelcast will apply defaults for all the settings if you leave the configuration empty.
+You can either provide a <code>hazelcast.xml</code> file on the classpath (e.g. <code>src/main/resources</code>)</p>
+
+<pre><code class="XML XML expample of default Hazelcast configuration ">    &lt;hazelcast xsi:schemaLocation="http://www.hazelcast.com/schema/config hazelcast-config-3.7.xsd"
+           xmlns="http://www.hazelcast.com/schema/config"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt;
+
+    &lt;/hazelcast&gt;
+</code></pre>
+
+<p>or provide a <code>com.hazelcast.config.Config</code> bean by means of Spring Java configuration like this:</p>
+
+<pre><code class="Java Java example of default Hazelcast configuration">    @Configuration
+    public class HazelcastConfig {
+
+        @Bean
+        public Config getConfig() {
+            return new Config();
+        }
+    }
+</code></pre>
+
+<blockquote><p><small>The hazelcast config can also be externalised from the application by
+passing the <code>-Dhazelcast.config</code> system property when starting the service.</small></p></blockquote>
+
+<h4>Step 3</h4>
+
+<p>Hazelcast will not start up if you start the application now. The Spring magic happens because of the
+<code>org.springframework.boot.autoconfigure.hazelcast.HazelcastAutoConfiguration</code> configuration class which is conditionally loaded by Spring
+whenever the application context sees that:</p>
+
+<ol>
+<li><code>HazelcastInstance</code> is on the classpath</li>
+<li>There is an unresolved dependency on a bean of type <code>HazelcastInstance</code></li>
+</ol>
+
+
+<p>To start using Hazelcast let&rsquo;s create a special service that will wire in a Hazelcast instance. The service doesn&rsquo;t do anything since it exists only to illustrate how
+Hazelcast is configured and started by Spring.</p>
+
+<pre><code class="Java Illustrate starting Hazelcast by adding a dependency">    @Service
+    public class MapService {
+
+        @Autowired
+        private HazelcastInstance instance;
+
+    }
+</code></pre>
+
+<p>If you start the application now and monitor the logs you will see that Hazelcast is indeed starting up. You should see something like:</p>
+
+<pre><code>[LOCAL] [dev] [3.7.5] Prefer IPv4 stack is true.                                                                                             
+[LOCAL] [dev] [3.7.5] Picked [192.168.1.1]:5701, using socket ServerSocket[addr=/0:0:0:0:0:0:0:0,localport=5701], bind any local is true   
+[192.168.1.1]:5701 [dev] [3.7.5] Hazelcast 3.7.5 (20170124 - 111f332) starting at [192.168.1.1]:5701                                     
+[192.168.1.1]:5701 [dev] [3.7.5] Copyright (c) 2008-2016, Hazelcast, Inc. All Rights Reserved.                                             
+[192.168.1.1]:5701 [dev] [3.7.5] Configured Hazelcast Serialization version : 1                                                            
+</code></pre>
+
+<p>and a bit further down:</p>
+
+<pre><code>Members [1] {                                                               
+    Member [192.168.1.1]:5701 - f7225da2-a428-4849-944f-43abfb12063a this 
+}                                                                           
+</code></pre>
+
+<blockquote><p><small> This is great! Hazelcast running with almost no effort at all!</small></p></blockquote>
+
+<h3>Add JCache</h3>
+
+<p>Next we want to start using Hazelcast as a JCache provider. To do this add a dependency on <code>spring-boot-starter-cache</code> in your pom file.</p>
+
+<pre><code class="XML Spring Boot Caching dependency in pom file ">    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;o
+        &lt;artifactId&gt;spring-boot-starter-cache&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+</code></pre>
+
+<p>Then, in order to use the annotations, add a dependency on the JCache API</p>
+
+<pre><code class="XML JCache dependency in pom file">    &lt;dependency&gt;
+        &lt;groupId&gt;javax.cache&lt;/groupId&gt;
+        &lt;artifactId&gt;cache-api&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+</code></pre>
+
+<p>Finally to tell Spring to now configure caching add the <code>@EnableCaching</code> annotation to the Spring boot application class. The Spring boot application class is the one
+that is currently annotated with <code>@SpringBootApplication</code></p>
+
+<pre><code class="Java Enable Caching ">    @SpringBootApplication
+    @EnableCaching
+    public class Application {
+</code></pre>
+
+<p>Now something unexpected happens. Starting the application creates two hazelcast nodes which, if your local firewall allows multicast, join up to form a cluster. If multicasting works then you should see
+the following:</p>
+
+<pre><code>Members [2] {
+    Member [192.168.1.1]:5701 - 18383f04-43ac-41fc-a2bc-cd093a9706b6 this
+    Member [192.168.1.1]:5702 - b654cb85-7b59-489d-b599-64ddd2dc0730
+}
+
+2017-02-16 08:41:46.154  INFO 14141 --- [ration.thread-0] c.h.internal.cluster.ClusterService      : [192.168.1.1]:5702 [dev] [3.7.5] 
+
+Members [2] {
+    Member [192.168.1.1]:5701 - 18383f04-43ac-41fc-a2bc-cd093a9706b6
+    Member [192.168.1.1]:5702 - b654cb85-7b59-489d-b599-64ddd2dc0730 this
+}
+</code></pre>
+
+<p>This is saying that there are two Hazelcast nodes running; One on port <code>5701</code> and another on port <code>5702</code> and they have joined to form a cluster.</p>
+
+<blockquote><p><small> This is an unexpected complication, but lets ignore the second instance for now.</small></p></blockquote>
+
+<h3>Caching some results</h3>
+
+<p>Let&rsquo;s see if the caching works. Firstly we have to provide some cache configuration. Add the following to the <code>hazelcast.xml</code> file.</p>
+
+<pre><code class="XML Hazelcast Cache configuration ">    &lt;cache name="sumCache"&gt;
+        &lt;expiry-policy-factory&gt;
+            &lt;timed-expiry-policy-factory expiry-policy-type="CREATED"
+                                         duration-amount="1"
+                                         time-unit="MINUTES"/&gt;
+        &lt;/expiry-policy-factory&gt;
+    &lt;/cache&gt;
+</code></pre>
+
+<p>Next, to start caching change the <code>sum</code> function in the <code>CalculatorService</code> to:</p>
+
+<pre><code class="Java Cached Sum Service">    @CacheResult(cacheName="sumCache")
+    @RequestMapping(value = "/calc/{a}/plus/{b}", method = RequestMethod.GET)
+    public CalcResult sum(@PathVariable("a") Double a, @PathVariable("b") Double b) {
+         System.out.println(String.format("******&gt; Calculating %s + %s",a,b));
+
+         return new CalcResult(a + b);
+    }
+</code></pre>
+
+<ol>
+<li>On <code>line 1</code> we added the <code>@CacheResult</code> annotation to indicate that we want to cache the result of this function and want to place them in the cache called <code>sumCache</code></li>
+<li>On <code>line 4</code> we print a message to standard out so we can see the caching in action</li>
+</ol>
+
+
+<p>Start the application and call the <code>CalculatorService</code> to add two numbers together. You can use <code>curl</code> or simply navigate to the following URL in a browser window</p>
+
+<pre><code>http://localhost:8080/calc/200/plus/100 
+</code></pre>
+
+<blockquote><p><small> <strong>Note:</strong> The port could be something other than 8080. Check the standard out when starting the application for the correct port number</small></p></blockquote>
+
+<p>You&rsquo;ll get the following response</p>
+
+<pre><code>{"result":300.0}
+</code></pre>
+
+<p>and should see this output in standard out:</p>
+
+<pre><code>******&gt; Calculating 200.0 + 100.0
+</code></pre>
+
+<p>Subsequent calls to the service will not print this line,  but if you try again after a minute you&rsquo;ll see the message again.</p>
+
+<blockquote><p>So caching works! But what about the second HazelcastInstance ?</p></blockquote>
+
+<h3>Only one instance</h3>
+
+<p>So you may think that the second Hazelcast instance is due to the example <code>MapService</code> we added earlier. To test that we can disable it by commenting the <code>@Service</code> annotation.
+You can even delete the class if you like, but the application will still start two Hazelcast nodes.</p>
+
+<p>My guess as to what is going on is: When the application context starts, a Hazelcast instance is created by the JCache configuration due to the
+<code>@EnableCaching</code> annotation but this instance is <em>not</em> registered with the Spring context. Later on a new instance is created by the <code>HazelcastAutoConfiguration</code>
+which <em>is</em> managed by Spring and can be injected into other components.</p>
+
+<h3>Solution</h3>
+
+<p>I have found two solutions to the &lsquo;two instance problem&rsquo; so far. Each with its own drawbacks</p>
+
+<h5>Option 1</h5>
+
+<p>I got the following idea from <a href="https://stackoverflow.com/users/5759723/neil-stevenson">Neil Stevenson</a> over on <a href="https://stackoverflow.com/questions/42151600/hazelcast-and-jcache-in-spring-boot-creates-two-instances">stackoverflow</a>.</p>
+
+<pre><code class="Java Disable the Hazelcast auto configuration">    @EnableAutoConfiguration(exclude = {
+            // disable Hazelcast Auto Configuration, and use JCache configuration
+        HazelcastAutoConfiguration.class, CacheAutoConfiguration
+    })
+</code></pre>
+
+<p><strong>Drawback</strong>: You can&rsquo;t use the Hazelcast instance created this way directly. Spring has no knowledge of it, so you can&rsquo;t get it wired in anywhere.</p>
+
+<h5>Option 2</h5>
+
+<p>This as the same effect as option 1 above except that you can use the instance. You have to name the hazelcast instance in the config:</p>
+
+<pre><code>&lt;instance-name&gt;test&lt;/instance-name&gt;
+</code></pre>
+
+<p>and then tell the Spring context to use it by getting it by name:</p>
+
+<pre><code class="Java Bring the instance into Spring">    @Bean
+    public HazelcastInstance getInstance() {
+        return Hazelcast.getHazelcastInstanceByName("test");
+    }
+</code></pre>
+
+<p><strong>Drawback</strong>: This relies on the order of bean creation so I can only say that it works in Spring Boot 1.5.1.</p>
+
+<h5>Option 3</h5>
+
+<p>The best solution so far is to set and instance name as in Option 2 above and then setting the <code>spring.hazelcast.config=hazelcast.xml</code> in the <code>application.properties</code> file.</p>
+
+<p>see: <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3">hazelcast-jcache-option3</a></p>
+
+<h3>Conclusion</h3>
+
+<p>I personally think that option 3 is the best approach. That gives you the best of both worlds with minimum configuration.</p>
+
+<p>Spring Boot can be a bit magical at times and doesn&rsquo;t always do exactly what you would expect, but there is always a way to tell it to get out of the way and do
+it yourself. The people over at Spring are working hard to make everything &lsquo;just work&rsquo; and I am confident that these things will be ironed out over time.</p>
+
+<p><strong>UPDATE</strong></p>
+
+<p>It seems that this issue will be resolved soon due to the hard work of <a href="https://github.com/snicoll">@snicoll</a> over at Spring Boot and the Hazelcast community. See the issues:</p>
+
+<ul>
+<li><a href="https://github.com/spring-projects/spring-boot/issues/8467">https://github.com/spring-projects/spring-boot/issues/8467</a></li>
+<li><a href="https://github.com/hazelcast/hazelcast/issues/10007">https://github.com/hazelcast/hazelcast/issues/10007</a></li>
+<li><a href="https://github.com/hazelcast/hazelcast/pull/9973">https://github.com/hazelcast/hazelcast/pull/9973</a></li>
+</ul>
+
+]]></content>
+  </entry>
+  
+</feed>

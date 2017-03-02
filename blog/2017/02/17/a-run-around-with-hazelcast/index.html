@@ -110,8 +110,11 @@ implements the <a href="https://jcp.org/aboutJava/communityprocess/final/jsr107/
 <p>In this post I&rsquo;ll go through the motions of adding Hazelcast to a Spring Boot REST application and resolving the issues until we have a functioning REST service
 with its response cached in Hazelcast via JCache annotations.</p>
 
-<blockquote><p><small><strong>TLDR;</strong> I suggest reading the post to understand the eventual solution, but if you are impatient see the solution on
-<a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache">github - hazelcast-jcache</a></small></p></blockquote>
+<blockquote><p><small><strong>TLDR;</strong> I suggest reading the post to understand the eventual solution, but if you are impatient see the solution on github:
+<br/>
+* <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache">hazelcast-jcache option 1 and 2</a>
+and<br/>
+* <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3">hazelcast-jcache option 3</a></small></p></blockquote>
 
 <h3>Versions</h3>
 
@@ -447,12 +450,29 @@ which <em>is</em> managed by Spring and can be injected into other components.</
 
 <p><strong>Drawback</strong>: This relies on the order of bean creation so I can only say that it works in Spring Boot 1.5.1.</p>
 
+<h5>Option 3</h5>
+
+<p>The best solution so far is to set and instance name as in Option 2 above and then setting the <code>spring.hazelcast.config=hazelcast.xml</code> in the <code>application.properties</code> file.</p>
+
+<p>see: <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3">hazelcast-jcache-option3</a></p>
+
 <h3>Conclusion</h3>
 
-<p>I personally think that option 2 is the best approach. That gives you the best of both worlds with minimum configuration.</p>
+<p>I personally think that option 3 is the best approach. That gives you the best of both worlds with minimum configuration.</p>
 
 <p>Spring Boot can be a bit magical at times and doesn&rsquo;t always do exactly what you would expect, but there is always a way to tell it to get out of the way and do
 it yourself. The people over at Spring are working hard to make everything &lsquo;just work&rsquo; and I am confident that these things will be ironed out over time.</p>
+
+<p><strong>UPDATE</strong></p>
+
+<p>It seems that this issue will be resolved soon due to the hard work of <a href="https://github.com/snicoll">@snicoll</a> over at Spring Boot and the Hazelcast community. See the issues:</p>
+
+<ul>
+<li><a href="https://github.com/spring-projects/spring-boot/issues/8467">https://github.com/spring-projects/spring-boot/issues/8467</a></li>
+<li><a href="https://github.com/hazelcast/hazelcast/issues/10007">https://github.com/hazelcast/hazelcast/issues/10007</a></li>
+<li><a href="https://github.com/hazelcast/hazelcast/pull/9973">https://github.com/hazelcast/hazelcast/pull/9973</a></li>
+</ul>
+
 </div>
 
 
@@ -470,6 +490,12 @@ it yourself. The people over at Spring are working hard to make everything &lsqu
 
 <time class='entry-date' datetime='2017-02-17T08:09:39+11:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>17</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>8:09 am</span></time>
       
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/hazelcast/'>hazelcast,</a>, <a class='category' href='/blog/categories/java/'>java</a>, <a class='category' href='/blog/categories/jcache/'>jcache,</a>, <a class='category' href='/blog/categories/spring-boot/'>spring-boot,</a>
+  
+</span>
 
 
     </p>

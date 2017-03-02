@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Apm, | Ideas, Solutions, Work in progress]]></title>
   <link href="http://dirk.kirko.io/blog/categories/apm/atom.xml" rel="self"/>
   <link href="http://dirk.kirko.io/"/>
-  <updated>2017-02-20T12:19:59+11:00</updated>
+  <updated>2017-03-03T09:41:12+11:00</updated>
   <id>http://dirk.kirko.io/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
@@ -20,7 +20,7 @@
     <id>http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics</id>
     <content type="html"><![CDATA[<h3>Overview</h3>
 
-<p>A couple of month ago at <a href="http://www.ecetera.com.au" title="Ecetera">work</a>, I was tasked to replicate one of our client&rsquo;s <a href="http://www.ca.com/us/opscenter/ca-application-performance-management.aspx" title="CA Application Performance Management">Wily Introscope</a> dashboards in <a href="http://www.appdynamics.com" title="AppDynamics">AppDynamics</a>. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application.</p>
+<p>Some time ago, I was tasked to replicate one of our client&rsquo;s <a href="http://www.ca.com/us/opscenter/ca-application-performance-management.aspx" title="CA Application Performance Management">Wily Introscope</a> dashboards in <a href="http://www.appdynamics.com" title="AppDynamics">AppDynamics</a>. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application.</p>
 
 <p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/wily_dashboard.png" title="Example of the Wily Dashboard" ></p>
 
