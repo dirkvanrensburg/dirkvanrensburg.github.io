@@ -9,7 +9,7 @@ categories: AppDynamics, APM, Advanced
 
 ### Overview
 
-A couple of month ago at [work][ecetera], I was tasked to replicate one of our client's [Wily Introscope][introscope] dashboards in [AppDynamics][appd]. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application. 
+Some time ago, I was tasked to replicate one of our client's [Wily Introscope][introscope] dashboards in [AppDynamics][appd]. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application. 
 
 {% img center /images/ext_metrics_complex_dashboards_appd/wily_dashboard.png Example of the Wily Dashboard %}
 

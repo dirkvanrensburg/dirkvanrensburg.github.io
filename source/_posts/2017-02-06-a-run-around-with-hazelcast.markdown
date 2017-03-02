@@ -4,7 +4,7 @@ layout: post
 title: "Hazelcast, JCache and Spring Boot"
 date: 2017-02-17 08:09:39 +1100
 comments: true
-categories:
+categories: hazelcast, spring-boot, jcache, java
 ---
 
 [Hazelcast][hazelcast] is an in memory data grid which enables data sharing between nodes in a server cluster along with a full set of other data grid features. It also 
@@ -14,9 +14,11 @@ In this post I'll go through the motions of adding Hazelcast to a Spring Boot RE
 with its response cached in Hazelcast via JCache annotations.
 
 
-> <small>**TLDR;** I suggest reading the post to understand the eventual solution, but if you are impatient see the solution on 
-[github - hazelcast-jcache](https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache)</small>
-
+> <small>**TLDR;** I suggest reading the post to understand the eventual solution, but if you are impatient see the solution on github:
+<br/>
+* [hazelcast-jcache option 1 and 2](https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache)
+and<br/>
+* [hazelcast-jcache option 3](https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3)</small>
 
 ### Versions 
 
@@ -265,12 +267,27 @@ and then tell the Spring context to use it by getting it by name:
 ```
 **Drawback**: This relies on the order of bean creation so I can only say that it works in Spring Boot 1.5.1.
 
+
+##### Option 3
+
+The best solution so far is to set and instance name as in Option 2 above and then setting the `spring.hazelcast.config=hazelcast.xml` in the `application.properties` file.
+
+see: [hazelcast-jcache-option3](https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3)
+
 ### Conclusion
 
-I personally think that option 2 is the best approach. That gives you the best of both worlds with minimum configuration.
+I personally think that option 3 is the best approach. That gives you the best of both worlds with minimum configuration.
 
 Spring Boot can be a bit magical at times and doesn't always do exactly what you would expect, but there is always a way to tell it to get out of the way and do 
 it yourself. The people over at Spring are working hard to make everything 'just work' and I am confident that these things will be ironed out over time.
+
+**UPDATE**
+
+It seems that this issue will be resolved soon due to the hard work of [@snicoll](https://github.com/snicoll) over at Spring Boot and the Hazelcast community. See the issues:
+
+* https://github.com/spring-projects/spring-boot/issues/8467
+* https://github.com/hazelcast/hazelcast/issues/10007
+* https://github.com/hazelcast/hazelcast/pull/9973
 
 
 [hazelcast]: https://hazelcast.com/
