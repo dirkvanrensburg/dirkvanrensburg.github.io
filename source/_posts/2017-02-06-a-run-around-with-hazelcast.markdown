@@ -13,12 +13,21 @@ implements the [JCache (JSR107)][jcache] caching standard so it is ideal for bui
 In this post I'll go through the motions of adding Hazelcast to a Spring Boot REST application and resolving the issues until we have a functioning REST service 
 with its response cached in Hazelcast via JCache annotations.
 
-
 > <small>**TLDR;** I suggest reading the post to understand the eventual solution, but if you are impatient see the solution on github:
 <br/>
 * [hazelcast-jcache option 1 and 2](https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache)
 and<br/>
 * [hazelcast-jcache option 3](https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3)</small>
+
+> <small>**UPDATE 1:** It seems that this issue will be resolved soon due to the hard work of [@snicoll](https://github.com/snicoll) over at Spring Boot and the Hazelcast community. See the issues:
+>
+> * https://github.com/spring-projects/spring-boot/issues/8467
+> * https://github.com/hazelcast/hazelcast/issues/10007
+> * https://github.com/hazelcast/hazelcast/pull/9973
+</small>
+
+> <small>**UPDATE 2:** This problem described in this post was fixed in Spring Boot release 1.5.3. Check [this repository](https://github.com/dirkvanrensburg/hazelcast-springboot-jcache) for a clean example based on Spring boot 1.5.3. 
+> I am leaving the post here since it is still interesting due to the different ways the problem could be worked around.</small>
 
 ### Versions 
 
@@ -280,14 +289,6 @@ I personally think that option 3 is the best approach. That gives you the best o
 
 Spring Boot can be a bit magical at times and doesn't always do exactly what you would expect, but there is always a way to tell it to get out of the way and do 
 it yourself. The people over at Spring are working hard to make everything 'just work' and I am confident that these things will be ironed out over time.
-
-**UPDATE**
-
-It seems that this issue will be resolved soon due to the hard work of [@snicoll](https://github.com/snicoll) over at Spring Boot and the Hazelcast community. See the issues:
-
-* https://github.com/spring-projects/spring-boot/issues/8467
-* https://github.com/hazelcast/hazelcast/issues/10007
-* https://github.com/hazelcast/hazelcast/pull/9973
 
 
 [hazelcast]: https://hazelcast.com/
