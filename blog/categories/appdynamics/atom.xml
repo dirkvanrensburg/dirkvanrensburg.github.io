@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Appdynamics, | Ideas, Solutions, Work in progress]]></title>
+  <link href="http://dirk.kirko.io/blog/categories/appdynamics/atom.xml" rel="self"/>
+  <link href="http://dirk.kirko.io/"/>
+  <updated>2017-04-12T12:00:57+00:00</updated>
+  <id>http://dirk.kirko.io/</id>
+  <author>
+    <name><![CDATA[Dirk van Rensburg]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Extending Metrics for Complex Dashboards in AppDynamics]]></title>
+    <link href="http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/"/>
+    <updated>2014-11-28T15:16:35+00:00</updated>
+    <id>http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics</id>
+    <content type="html"><![CDATA[<h3>Overview</h3>
+
+<p>Some time ago, I was tasked to replicate one of our client&rsquo;s <a href="http://www.ca.com/us/opscenter/ca-application-performance-management.aspx" title="CA Application Performance Management">Wily Introscope</a> dashboards in <a href="http://www.appdynamics.com" title="AppDynamics">AppDynamics</a>. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application.</p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/wily_dashboard.png" title="Example of the Wily Dashboard" ></p>
+
+<p>The status light colours were assigned as follows:</p>
+
+<table>
+<thead>
+<tr>
+<th> <strong>Status</strong>    </th>
+<th>        <strong>Meaning</strong>                                    </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td> GREY      </td>
+<td> No activity since 5am this morning                    </td>
+</tr>
+<tr>
+<td> RED       </td>
+<td> No activity in the last hour, but something since 5 am    </td>
+</tr>
+<tr>
+<td> YELLOW    </td>
+<td> No activity in the last 10 minutes, but some in the last hour </td>
+</tr>
+<tr>
+<td> GREEN     </td>
+<td> Activity in the last 10 minutes               </td>
+</tr>
+</tbody>
+</table>
+
+
+<p>&nbsp;<br/>
+The data for each light was gathered by Introscope using custom instrumentation points looking for calls to a particular POJO method. The first parameter to this method was the client identifier, so Introscope collected metrics for each call to this method grouping it by 10 minutes, 1 hour and 1 day.</p>
+
+<p>In this post I will describe what I did to reproduce the dashboard in AppDynamics. Even though it is a rather hacky work around, it is still interesting. The solution works by extracting metrics from AppDynamics using the REST API and sending it back in as new metrics, which can be used by health rules to drive status lights.</p>
+
+<p><em>The code and examples in this post is from an example application built to illustrate the solution more clearly.</em></p>
+
+<p><em>See github: <a href="https://github.com/dirkvanrensburg/blogs-appd-metrics-for-dashboards">https://github.com/dirkvanrensburg/blogs-appd-metrics-for-dashboards</a></em></p>
+
+<h3>Status lights in AppDynamics</h3>
+
+<p>The status light in AppDynamics relies on a health rule to drive the state of the light. The AppDynamics status light is green by default, to indicate no health rule violations. Yellow for WARNING rule violations and Red for CRITICAL rule violations. The status light in Introscope is grey when there is no data, so it essentially has four states compared to the three states available in AppDynamics.</p>
+
+<p>As mentioned, the AppDynamics status light uses one health rule, which means you cannot tie the different colours of the light to metrics gathered over different time ranges. The time range for the light is determined by the setting on the widget or the dashboard, where the Introscope status light can use separate metrics for each status.</p>
+
+<h3>Getting the information</h3>
+
+<p>The first step to solving the problem is to gather the information we need to display. We can look at the Introscope probe configuration to see what it uses for for the status light:</p>
+
+<pre><code>TraceOneMethodWithParametersOfClass: SomeCentralClass loadItems(Ljava/lang/String;)V BlamedMethodRateTracer "SYS|Service By Client|{0}:Invocations Per Second"
+</code></pre>
+
+<p>This means that Introscope will count the invocations per second of a method called <strong>loadItems</strong>, on an instance of the class <strong>SomeCentralClass</strong> and group this count by the client identifier <em>(the String parameter to loadItems)</em>.</p>
+
+<h4>Information points</h4>
+
+<p>To capture that type of information in AppDynamics you use <a href="https://docs.appdynamics.com/display/PRO39/Configure+Code+Metric+Information+Points" title="AppDynamics Information Points">information points</a>. Information points tracks calls to a method on a POJO and collects metrics such as <em>Calls Per Minute</em> and <em>Average Response Time</em>. AppDynamics does not allow information points to be <em>&ldquo;split&rdquo;</em> by parameter in a generic way. That means to get the required information, we have to create an information point for every client.</p>
+
+<p>You create information points by opening the <em>Information Points</em> view from the side menu and clicking on <em>New</em></p>
+
+<pre><code>Analyse -&gt; Information Points -&gt; New
+</code></pre>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/information_points.png" title="Information Points in AppDynamics" ></p>
+
+<p>Information points track calls to specific methods so you need to provide the <em>class name</em>, <em>method name</em> of the method to collect metrics for. In this case we want separate informations points based on the parameter to the method call, so we need to set a <em>match condition</em></p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/capture_information_point.png" title="Capture Information Point" ></p>
+
+<p>The information point will then start collecting data for <em>Average Response Time</em>, <em>Calls per minute</em>, and <em>Errors per minute</em> as seen on the following dashboard view.</p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/infopoint_metrics.png" title="Information Point Metrics" ></p>
+
+<p>Once defined, the information points are also available in the metric browser where you can plot the different metrics of each information point on the same graph. The following image shows the <em>Average Response Time</em> for <strong>CLIENT2</strong> and <strong>CLIENT4</strong></p>
+
+<pre><code>Analyse -&gt; Metric Browser
+</code></pre>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/infopoints_metricbrowser.png"></p>
+
+<h3>Using the REST API</h3>
+
+<p>The AppDynamics controller provides a <a href="https://docs.appdynamics.com/display/PRO39/Use+the+AppDynamics+REST+API" title="AppDynamics REST API">REST API</a>, which enables you to programmatically extract information out of the controller and, in the case of configuration, send information to the controller. This means that we can call the controller to get the metric information of the information points we just configured. The URL to an information point metric can be retrieved from the metric browser. Right click on the information point and the metric you are interested in, <em>Calls per Minute</em> in our case, and select <em>Copy REST URL</em></p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/get_rest_url.png" title="&ldquo;Rest URL from metric browser&rdquo;" ></p>
+
+<p>This will copy the URL to the clipboard and you can test it by pasting it into a new tab in your web browser. You should see something like this</p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/rest_results_example.png" title="&ldquo;Example REST results&rdquo;" ></p>
+
+<p>The URL can be changed to get the information over different time ranges by changing the <em>time-range-type</em> and <em>duration-in-mins</em> fields. The <em>time-range-type</em> field is used to get information relative to a point in time, so for example it can be used to get information for the last 15 minutes or for the 30 minutes after 10 am this morning. We can use this to get the information we are after out of AppDynamics. We can get the number of times each client called the service in the last 10, 60 or 960 minutes by changing these fields and calling the controller.</p>
+
+<p>Having the information available as a REST service call is one thing, but we need it <em>in</em> the controller so we can create a dashboard. It is of no real use on the outside. To get metrics into the controller we need to use the Standalone Machine Agent.</p>
+
+<h3>The Standalone Machine Agent</h3>
+
+<p>The <a href="https://docs.appdynamics.com/display/PRO39/Standalone+Machine+Agent">Standalone Machine Agent</a> is a Java application whose primary function is to monitor machine statistics such as CPU, Memory utilisation and Disk IO. It also provides a way to send metrics into AppDynamics by means of a <a href="https://docs.appdynamics.com/display/PRO39/Add+Metrics+with+a+Monitoring+Extension">Monitoring Extension</a>. The extension can supplement the existing metrics in AppDynamics by sending your custom metrics to the controller. A custom metric can be common across the nodes or associated with a specific tier. You specify the path, as seen in the metric browser, where the metrics should be collected relative to the root <em>Custom Metrics</em></p>
+
+<h4>Get the information out</h4>
+
+<p>As mentioned before the metrics we are interested in can be extracted from the AppDynamics controller using the REST API and using the Standalone Machine Agent we can create new metrics, which we can use for the dashboard. Using the following REST API call, we can get the metrics captured by our information points rolled up to the different time ranges. The call below will get the <em>Calls per Minute</em> metric of <em>CLIENT1</em></p>
+
+<pre><code>http://controller:8090/controller/rest/applications/ComplexDashboardTest/metric-data?metric-path=Information Points|C1|Calls per Minute&amp;time-range-type=BEFORE_NOW&amp;duration-in-mins=10
+</code></pre>
+
+<p>By calling the above REST call multiple times for every client we can get values for <em>Calls per Minute</em> rolled up over the periods we are interested in (10, 60 and 960 minutes). However, just getting the values of the last 960 minutes (16 hours) is not good enough since it will give incorrect values early in the day. Before 13h00 it could still pick up calls from the previous day, so we need a different approach.  To do this we change the <em>time-range-type</em> to <strong>AFTER_TIME</strong> and provide a start time of 5am the morning. This will then only return values for the 960 minutes after 5am.</p>
+
+<p>The following REST call will do that - replace the <strong>${timeat5am}</strong> value with the UNIX time for 5am of that day.</p>
+
+<pre><code>http://controller:8090/controller/rest/applications/ComplexDashboardTest/metric-data?metric-path=Information Points|C1|Calls per Minute&amp;time-range-type=AFTER_TIME&amp;start-time=${timeat5am}000&amp;duration-in-mins=960
+</code></pre>
+
+<h4>Send the information back in</h4>
+
+<p>To send the information back in we need to actually create the monitoring extension, which essentially is a script which the Standalone machine agent will call periodically and any values the script writes to standard output will be forwarded to the controller. We want the script to send metrics such as the following:</p>
+
+<pre><code>name=Custom Metrics|Information Points|CLIENT1|Calls per 10 Minutes,value=0
+name=Custom Metrics|Information Points|CLIENT1|Calls per 60 Minutes,value=2
+name=Custom Metrics|Information Points|CLIENT1|Calls per 960 Minutes,value=2
+name=Custom Metrics|Information Points|CLIENT2|Calls per 10 Minutes,value=0
+name=Custom Metrics|Information Points|CLIENT2|Calls per 60 Minutes,value=1
+name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
+
+...And so on for all the clients
+</code></pre>
+
+<p>Once we have the extension installed and reporting, the new metrics will show up in the AppDynamics metric browser at the following location, assuming the machine agent is reporting for the tier called <em>&lsquo;OneTier&rsquo;</em>.</p>
+
+<pre><code>Application Infrastructure Performance -&gt; OneTier -&gt; Custom Metrics
+</code></pre>
+
+<p>There will be a section for each client (<strong>CLIENT1</strong> to <strong>CLIENTx</strong>) and each will have a metric for each of the time ranges we are interested in (10, 60 and 960 minutes)</p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/new_metrics_in_browser.png" title="&ldquo;The new metrics displayed in the browser&rdquo;" ></p>
+
+<h3>Health Rules</h3>
+
+<p><a href="https://docs.appdynamics.com/display/PRO39/Health+Rules">Health Rules</a> provides a way to specify conditions which the system will consider WARNING or CRITICAL conditions. You specify the metric to monitor and the threshold or baseline to compare it to for both the WARNING and CRITICAL condition.</p>
+
+<p>We can now create health rules to track these metrics, so that the dashboard lights can show how recently a particular client accessed the system. To create a health rule we use the side menu in the AppDynamics controller.</p>
+
+<pre><code>Alert &amp; Response -&gt; Health Rules -&gt; (click on +)
+</code></pre>
+
+<p>First specify a name for the rule, the type of metric we will use and the time range to use when evaluating the health rule. The last 5 minutes is good enough since the machine agent will send a value every minute and the value it sends is already summed over the period in question.</p>
+
+<p>We need to create one health rule for every client
+<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_step1.png" title="&ldquo;Create the health rule&rdquo;" ></p>
+
+<p>The WARNING condition is raised if there were no calls in the last 10 minutes, but some in the last 60 minutes.
+<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_warning.png" title="&ldquo;Create the health rule&rdquo;" ></p>
+
+<p>The CRITICAL condition is raised if there were no calls in the last 60 minutes.
+<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_critical.png" title="&ldquo;Create the health rule&rdquo;" ></p>
+
+<h3>Putting it all together</h3>
+
+<p>Now we have all the information we need to start assembling the dashboard. Status lights only work on <em>Custom Dashboard</em> as opposed to <em>Node/Tier Dashboards</em>. To create a <em>Custom Dashboard</em> we click on the AppDynamics logo at the left top an choose <em>Custom Dashboards</em></p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/select_custom_dashboards.png" title="&ldquo;Create Custom Dashboard&rdquo;" ></p>
+
+<p>Next we create a new dashboard by clicking on the <em>Create Dashboad</em> and set the layout of the canvas to <strong>absolute</strong>. This is because the grid layout does not support metric labels on top of other widgets and we need this to complete the dashboard.</p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/create_absolute_dashboard.png" title="&ldquo;Create new Dashboard&rdquo;" ></p>
+
+<p>Put a label with the text <em>Client Access</em> and place it at the top of the dashboard, add a label for the first status light with the text <em>CLIENT 1</em> and then add the status light for client 1. The status light is linked to the health rule for <em>CLIENT1</em> by selecting it in the status light properties.</p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_first_statuslight.png" title="&ldquo;Status light properties&rdquo;" ></p>
+
+<p>We can now repeat these steps for the remaining 5 clients, linking each to the appropriate health rule, and finally the dashboard looks like this</p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard.gif" title="&ldquo;All the status lights&rdquo;" ></p>
+
+<p>As mentioned at the start of the post, the Introscope status light can be in four states and the AppDynamics status light only three. To represent the fourth state we can put the value of the <em>Calls per 960 Minutes</em> metric on the status light as a dynamic label.</p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/metric_label_call_960.png" title="&ldquo;Metric label&rdquo;" ></p>
+
+<p>The label background is set as transparent, and sized so that it will fit on the status light for client 1. After adding a metric label for each client, the dashboard is complete. We now have a fully functional dashboard which displays the same information as the original Introscope dashboard. In fact, it shows a little more information because we added the <em>&lsquo;calls today&rsquo;</em> label on the status to make up for the missing fourth state. Knowing the number of calls for the day is much better than just having a red light meaning <em>&lsquo;some calls today but nothing in the last hour&rsquo;</em>.</p>
+
+<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard_final.gif" title="&ldquo;Completed Dashboard&rdquo;" ></p>
+
+<h3>Conclusion</h3>
+
+<p>Using the AppDynamics REST API and Standalone Machine Agent allows you to do powerful enrichment of the metric information in AppDynamics. You could, for example, monitor an internal legacy system through a custom built API and combine that data with information already captured by AppDynamics. This can then be stored as a new metric which you can use to visualise the data.</p>
+]]></content>
+  </entry>
+  
+</feed>
