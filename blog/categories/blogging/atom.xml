@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Blogging, | Ideas, Solutions, Work in progress]]></title>
   <link href="http://dirk.kirko.io/blog/categories/blogging/atom.xml" rel="self"/>
   <link href="http://dirk.kirko.io/"/>
-  <updated>2017-04-19T05:09:47+00:00</updated>
+  <updated>2017-04-19T06:03:53+00:00</updated>
   <id>http://dirk.kirko.io/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
@@ -230,6 +230,8 @@ The container will start up and your terminal should be attached and in the <cod
 <pre><code>blogger@eba0e6a691ef:/octopress$
 </code></pre>
 
+<p>The <code>exit</code> command will exit the container and clean up.</p>
+
 <h3>Rakefile</h3>
 
 <p>In order to preview the blog while working on a post, you need to change the <code>Rakefile</code> in the root of the blog repository to bind the preview server to the IP wildcard <code>0.0.0.0</code>. This makes it possible to access the blog preview in your browser at <code>http://localhost:4000</code></p>
@@ -246,7 +248,7 @@ The container will start up and your terminal should be attached and in the <cod
 
 <h3>Launch the container</h3>
 
-<p>The next step is to launch the container. Execute this command from anywhere:</p>
+<p>The next step is to launch the container. Execute this command from anywhere, replacing the paths to your blog and .ssh keys:</p>
 
 <pre><code>docker run -p 4000:4000 --rm --volume &lt;absolute-path-to-blog-repository&gt;:/octopress --volume &lt;absolute-path-to-user-home&gt;/.ssh:/home/blogger/.ssh -ti blog/octopress /bin/bash
 </code></pre>
