@@ -4,7 +4,7 @@
   <title><![CDATA[Ideas, Solutions, Work in progress]]></title>
   <link href="http://dirk.kirko.io/atom.xml" rel="self"/>
   <link href="http://dirk.kirko.io/"/>
-  <updated>2017-04-19T06:03:53+00:00</updated>
+  <updated>2017-04-19T06:06:37+00:00</updated>
   <id>http://dirk.kirko.io/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
@@ -348,6 +348,14 @@ The container will start up and your terminal should be attached and in the <cod
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>rake install</span></code></pre></td></tr></table></div></figure>
 
+
+<h4>New post</h4>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>rake new_post</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Will ask for the post name and create the post file in <code>source/_posts</code></p>
 
 <h4>Preview</h4>
 
