@@ -9,7 +9,7 @@
   <meta name="author" content="Dirk van Rensburg">
 
   
-  <meta name="description" content="I recently purchased a Dell XPS 15 9560 which I use for my day to day work, with Ubuntu 16.04 as the only operating system. It is a wonderful laptop &hellip;">
+  <meta name="description" content="TLDR; Functional programming techniques makes it possible to reduce the amount of boiler plate code required when working with JavaScript libraries &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://dirk.kirko.io">
+  <link rel="canonical" href="http://pappanyn.me">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Ideas, Solutions, Work in progress" type="application/atom+xml">
@@ -70,7 +70,7 @@
   
 <form action="https://www.google.com/search" method="get">
   <fieldset role="search">
-    <input type="hidden" name="q" value="site:dirk.kirko.io" />
+    <input type="hidden" name="q" value="site:pappanyn.me" />
     <input class="search" type="text" name="q" results="0" placeholder="Search"/>
   </fieldset>
 </form>
@@ -85,6 +85,280 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017/08/24/callbacks-to-observables-in-typescript/">Callbacks to Observables in TypeScript</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-08-24T22:24:08+00:00'><span class='date'><span class='date-month'>Aug</span> <span class='date-day'>24</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>10:24 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><blockquote><h4>TLDR;</h4>
+
+<p>Functional programming techniques makes it possible to reduce the amount of boiler plate code required when working with JavaScript libraries that require traditional callback functions. This blog will show how to drastically reduce the code and how to turn the callback handlers into observables.</p></blockquote>
+
+<h3>Back story</h3>
+
+<p>I was working on hooking the <a href="https://github.com/aws/amazon-cognito-identity-js">AWS Cognito JS SDK</a> into my Angular 4 project. I was using <a href="https://github.com/systemjs/systemjs">SytemJS</a> and <a href="https://rollupjs.org/">RollupJS</a> and after struggling for some time to get the bundling to work properly, I gave up and decided to just use the plain JavaScript API.</p>
+
+<p>This meant that not only was I missing the nice TypeScript typings for the SDK, but also faced with the clunky callback patterns used in some JavaScript API&rsquo;s.</p>
+
+<h3>JavaScript Callbacks</h3>
+
+<p>There are various common JavaScript patterns for handling async methods via callbacks. These callback mechanisms allow callers to provide a hook so that they can be called back in the future with the result or error.</p>
+
+<p>One common approach is that the method requires a single callback function in addition to its normal parameters. The called function will then invoke the callback function with an error as the first parameter, or a result as the second parameter. It is up to the callback function to determine whether it received an error or not.</p>
+
+<p>The following contrived example shows how the <code>sendMsg</code> function will invoke the callback and pass an error message or success result.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="kd">function</span> <span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="nx">message</span> <span class="o">===</span> <span class="s1">&#39;dontsend&#39;</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">callback</span><span class="p">(</span><span class="s1">&#39;whoops not sending!&#39;</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">callback</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="s1">&#39;Success!&#39;</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">error</span><span class="p">,</span> <span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s2">&quot;An error occurred&quot;</span> <span class="o">+</span> <span class="nx">error</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Message was sent successfully.&quot;</span> <span class="o">+</span> <span class="nx">result</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">})</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As mentioned before there are other common ways to do callbacks such as requiring separate success and error handling functions, or using objects with <code>onSuccess</code> and <code>onFailure</code> methods. However, the solution is similar regardless of the callback pattern followed so the rest of this article will use the single callback function approach above as the example.</p>
+
+<h3>TypeScript, Observables and callbacks</h3>
+
+<p>Calling such a JavaScript function from TypeScript looks something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">public</span> <span class="nx">sendMessage</span><span class="p">(</span><span class="nx">message</span>: <span class="kt">string</span><span class="p">,</span> <span class="nx">cb</span><span class="o">:</span> <span class="p">(</span><span class="nx">err</span>:<span class="kt">any</span><span class="p">,</span> <span class="nx">res</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="k">void</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nx">sendJS</span><span class="p">.</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="nx">cb</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is all fine and works ok but I don&rsquo;t want the clients of my code to have to pass a callback handler. What I really want is to return an <a href="http://reactivex.io/documentation/observable.html">Observable</a> to my clients. I can achieve this as follows:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">public</span> <span class="nx">sendMessage</span><span class="p">(</span><span class="nx">message</span>: <span class="kt">string</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">let</span> <span class="nx">sendResult</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">sendJS</span><span class="p">.</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span>
+</span><span class='line'>            <span class="p">(</span><span class="nx">err</span>:<span class="kt">any</span><span class="p">,</span> <span class="nx">res</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>                <span class="k">if</span> <span class="p">(</span><span class="o">!!</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                    <span class="nx">sendResult</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">err</span><span class="p">);</span>
+</span><span class='line'>                <span class="p">}</span>
+</span><span class='line'>                <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>                    <span class="nx">sendResult</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="s2">&quot;Message was sent successfully.&quot;</span> <span class="o">+</span> <span class="nx">res</span><span class="p">);</span>
+</span><span class='line'>                <span class="p">}</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>    <span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">sendResult</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>However the bit on <code>line 6</code> where we check for the error is a bit tedious. I will have to duplicate this all over the place and I don&rsquo;t necessarily know what to do with the error. In most cases I will just send it along for the client to deal with.</p>
+
+<p>To get rid of the error handling duplication I write a function to take the subject, success and <em>optional</em> error handler functions and return a callback function</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">interface</span> <span class="nx">CallbackFunction</span> <span class="p">{</span>
+</span><span class='line'>    <span class="p">(</span><span class="nx">error</span>: <span class="kt">any</span><span class="p">,</span> <span class="nx">result</span>: <span class="kt">any</span><span class="p">)</span><span class="o">:</span> <span class="k">void</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'> <span class="kd">function</span> <span class="nx">subToHandler</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">subject</span>: <span class="kt">Subject</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">,</span> <span class="nx">successFn</span><span class="o">:</span> <span class="p">(</span><span class="nx">m</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">T</span><span class="p">,</span> <span class="nx">errorFn</span><span class="o">?:</span> <span class="p">(</span><span class="nx">a</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">any</span><span class="p">)</span><span class="o">:</span> <span class="nx">CallbackFunction</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="p">(</span><span class="nx">error</span>:<span class="kt">any</span><span class="p">,</span> <span class="nx">result</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="o">!!</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="p">(</span><span class="o">!!</span><span class="nx">errorFn</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">subject</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">errorFn</span><span class="p">(</span><span class="nx">error</span><span class="p">));</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>            <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">subject</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">error</span><span class="p">);</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>        <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>            <span class="nx">subject</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">successFn</span><span class="p">(</span><span class="nx">result</span><span class="p">));</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">};</span>
+</span><span class='line'> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The interface <code>CallbackFunction</code> cleans the method signature up a bit and makes things a bit easier to read.</p>
+
+<p>The returned callback function checks the error and, if an error handler was provided, applies it before calling <code>error</code> on the subject <code>(line 5)</code>. If no error is provided to the callback function then it will call <code>next</code> on the subject to pass the valid result on to the observers.</p>
+
+<p>This means that I can now rewrite the send message code as follows:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">public</span> <span class="nx">sendMessage</span><span class="p">(</span><span class="nx">message</span>: <span class="kt">string</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">let</span> <span class="nx">sendResult</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">sendJS</span><span class="p">.</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span>
+</span><span class='line'>        <span class="nx">subToHandler</span><span class="p">(</span><span class="nx">sendResult</span><span class="p">,</span>
+</span><span class='line'>            <span class="nx">res</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>                <span class="k">return</span> <span class="s2">&quot;Message was sent successfully.&quot;</span> <span class="o">+</span> <span class="nx">res</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">)</span>
+</span><span class='line'>    <span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">sendResult</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is much better since I don&rsquo;t have to call <code>next</code> and <code>error</code> on the subject and I don&rsquo;t have to check for the error anymore. There is also much less code because I no longer have to explicitly handle the error. It can be fully delegated to the observers of the subject.</p>
+
+<p>However, this still not perfect. I will be duplicating the <code>Subject</code> and <code>Observable</code> creation lines everywhere. It also looks a bit weird to be creating a Subject and passing it on to another function.</p>
+
+<p>I can get rid of the statements on <code>lines 3 and 12</code> above by writing another function which will return the Observable, relieving me from creating the subject explicitly.</p>
+
+<p>Consider the following snippet:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kd">function</span> <span class="nx">exec</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">fn</span><span class="o">:</span> <span class="p">(</span><span class="nx">cb</span>:<span class="kt">CallbackFunction</span><span class="p">)</span><span class="o">=&gt;</span><span class="k">void</span><span class="p">,</span> <span class="nx">successFn</span><span class="o">:</span> <span class="p">(</span><span class="nx">a</span>:<span class="kt">any</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">T</span><span class="p">,</span> <span class="nx">errorFn</span><span class="o">?:</span> <span class="p">(</span><span class="nx">e</span>:<span class="kt">any</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">any</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">let</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">fn</span><span class="p">(</span><span class="nx">subToHandler</span><span class="p">(</span><span class="nx">result</span><span class="p">,</span> <span class="nx">successFn</span><span class="p">,</span> <span class="nx">errorFn</span><span class="p">));</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">result</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here I add another function <code>exec</code> which will create a subject, turn the subject into a handler using <code>subToHandler</code> defined earlier, apply the function provided as first parameter and then return an observable.</p>
+
+<p>You&rsquo;ll notice that the first parameter <code>fn</code> is a function which takes a <code>CallbackFunction</code> as its sole parameter. The JavaScript library functions require parameters in addition to the callback funtion, so I cannot pass the JavaScript function in to  <code>exec</code>.</p>
+
+<p>Consider the following rewrite of the <code>sendMessage</code> function:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">public</span> <span class="nx">sendMessage</span><span class="p">(</span><span class="nx">message</span>: <span class="kt">string</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">exec</span><span class="p">(</span>
+</span><span class='line'>        <span class="p">(</span><span class="nx">cb</span>: <span class="kt">CallbackFunction</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>            <span class="nx">sendJS</span><span class="p">.</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="nx">cb</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">},</span>
+</span><span class='line'>        <span class="nx">res</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="s2">&quot;Message was sent successfully.&quot;</span> <span class="o">+</span> <span class="nx">res</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here I effectively partially applied the original <code>sendJS.sendMsg</code> function by closing over the value of the first argument, <code>message</code>, and returning a new function which takes <em>only</em> a callback function as parameter. This allows the <code>exec</code> function to create the appropriate callback function, using <code>subToHandler</code> and pass it to the partially applied <code>sendMsg</code>.</p>
+
+<h3>In closing</h3>
+
+<p>By using some basic functional programming techniques I could reduce the amount of boiler plate code required when working with JavaScript libraries with traditional callback functions. I managed to reduce the code drastically and turned the callback handler into an Observable which clients of my service can subscribe to.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -253,1542 +527,9 @@ played around with different values a bit and found that, for me, the magic numb
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017/04/12/octopress-in-a-docker-container/">Octopress in a Docker Container</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-04-12T22:46:14+00:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>12</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>10:46 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I use <a href="http://octopress.org/">Octopress</a> for my, albeit infrequent, blogging. I like the idea of statically generating the blog site with the posts and keeping it all in Git. I also enjoy the ability to quickly type up a post using <a href="https://www.google.com.au/webhp?sourceid=chrome-instant&amp;ion=1&amp;espv=2&amp;ie=UTF-8#q=markdown">markdown</a> and then publish it. No need to log in to a site to write the post.</p>
-
-<p>My biggest problem with Octopress is that it requires me to install and manage a <a href="https://www.ruby-lang.org/en/">Ruby</a> environment. Either by outright installing Ruby on my machine or through <a href="https://github.com/rbenv/rbenv">rbenv</a>. This usually means, for me at least, a struggle to get all the gems successfully installed. Adding plugins often result in errors while installing gems either due to dependencies between gem versions, or some system level dependency that is not available.</p>
-
-<p>These system level dependencies really bugs me so when I recently replaced my laptop I decided to keep my OS Ruby free by managing the Octopress Ruby environment and the system level dependencies in a <a href="https://www.docker.com/">Docker</a> container rather than using <code>rbenv</code></p>
-
-<blockquote><p>TLDR; <small>The impatient can find the Dockerfile at: <a href="https://github.com/dirkvanrensburg/octopress2-dockerfile">https://github.com/dirkvanrensburg/octopress2-dockerfile</a></small></p></blockquote>
-
-<h3>Tested environment</h3>
-
-<table>
-<thead>
-<tr>
-<th>Thing     </th>
-<th> Version</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>OS        </td>
-<td> Ubuntu 16.04</td>
-</tr>
-<tr>
-<td>Docker    </td>
-<td> 17.03.1-ce</td>
-</tr>
-<tr>
-<td>Octopress </td>
-<td> 2.0</td>
-</tr>
-</tbody>
-</table>
-
-
-<p><br/></p>
-
-<h3>Assumptions</h3>
-
-<p><a href="github-pages">Github Pages</a> to publish and host my blog and this post assumes that you are too. However, this post should be useful even if you don&rsquo;t want to use Github Pages.</p>
-
-<h3>Octopress</h3>
-
-<p>Now that you have a working container, it is time to do the Octopress installation. You can either start with a fresh copy of Octopress, see the <a href="http://octopress.org/docs/">documentation</a> or with an existing Octopress blog. If you have an exising blog then you may have to tweak the Dockerfile a bit to add any system level dependencies your blog my have.</p>
-
-<h4>New Octopress blog</h4>
-
-<p>For a new blog you have a bit of a chicken and egg problem. You need to get the Octopress stuff, but you can&rsquo;t run any Ruby dependent commands because Ruby is in the Docker container.</p>
-
-<p>Clone Octopress and take note of the <code>Gemfile</code> in the root of the repository:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>git clone git://github.com/imathis/octopress.git octopress
-</span><span class='line'>cd octopress</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p><small> You&rsquo;ll need the <code>Gemfile</code> in the root of the blog repository for building the Docker image later on. </small></p></blockquote>
-
-<h4>Existing octopress blog</h4>
-
-<p>The following steps should get the blog repository in the correct state for generating and publishing.</p>
-
-<ul>
-<li>If you don&rsquo;t have a current copy of your blog then clone the repository from Github</li>
-<li>Once you have cloned the repository change into the repository directory and change the working branch from <code>master</code> to <code>source</code></li>
-<li>Create the <code>_deploy</code> folder and change into that directory</li>
-<li>Now link the <code>_deploy</code> directory with the master branch of your blog repository
-
-<ul>
-<li><code>git init</code></li>
-<li><code>git remote add origin &lt;githubrepourl&gt;</code></li>
-<li><code>git pull origin master</code></li>
-</ul>
-</li>
-</ul>
-
-
-<blockquote><p><small> You&rsquo;ll need the <code>Gemfile</code> in the root of the blog repository for building the Docker image later on. </small></p></blockquote>
-
-<h3>Docker</h3>
-
-<p>Docker gives you the ability to create a lightweight container for processes and their dependencies. You create a container from some published base image and then install the necessary packages as you would on a normal machine. You can then run the container, which will start the required process and run it without poluting the host operating system with unecessary dependencies.</p>
-
-<h4>Dockerfile</h4>
-
-<p>A <code>Dockerfile</code> is a file which tells the Docker daemon what you want in your container. How to write a <code>Dockerfile</code> and what you can do with it is extensively documented <a href="https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices">here</a>.</p>
-
-<p>You basically start with a <code>FROM</code> statement telling Docker where you want to start and then telling it
-which package to install. In this case you have a number of dependencies as seen here:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>FROM ubuntu:16.04
-</span><span class='line'>
-</span><span class='line'>RUN apt-get update -y && apt-get -y install \
-</span><span class='line'>  sudo \
-</span><span class='line'>  gcc make \
-</span><span class='line'>  git \
-</span><span class='line'>  vim less \
-</span><span class='line'>  curl \
-</span><span class='line'>  ruby ruby-dev \
-</span><span class='line'>  python2.7 python-pip python-dev</span></code></pre></td></tr></table></div></figure>
-
-
-<p>These packages should be enough to get going with Octopress. The next step is to set up a user so that you don&rsquo;t have to run the rake commands as root.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># Add blogger user
-</span><span class='line'>  RUN adduser --disabled-password --gecos "" blogger && \
-</span><span class='line'>  echo "blogger ALL=(root) NOPASSWD:ALL" &gt; /etc/sudoers
-</span><span class='line'>
-</span><span class='line'>  USER blogger</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next create the working folder <code>octopress</code> and grant permissions to blogger to by changing ownership of the folders where you need to make changes in the future</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># Directory for the blog files
-</span><span class='line'>RUN sudo mkdir /octopress
-</span><span class='line'>WORKDIR /octopress
-</span><span class='line'>
-</span><span class='line'># Set permissions so blogger can install gems
-</span><span class='line'>  RUN sudo chown -Rv blogger:blogger /octopress
-</span><span class='line'>  RUN sudo chown -Rv blogger:blogger /var/lib/gems
-</span><span class='line'>  RUN sudo chown -Rv blogger:blogger /usr/local/bin</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Running <code>rake preview</code> in your octopress blog folder will generate the blog and serve it on port 4000. In order to access the blog from outside the container you need to tell Docker to expose port 4000 for connections.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># Expose port 4000 so we can preview the blog
-</span><span class='line'>EXPOSE 4000</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next it adds the <code>Gemfile</code>. The contents of this file will be custom to your blog so copy it from the blog repository as mentioned earlier. Easiest is to copy your <code>Gemfile</code> to be in the same folder as the <code>Dockerfile</code> since the docker <code>ADD</code> command is relative to the directory you build from.</p>
-
-<p>The next section will add the <code>Gemfile</code> to the Docker image and install the bundles.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  # Add the Gemfile and install the gems
-</span><span class='line'>  ADD Gemfile /octopress/Gemfile
-</span><span class='line'>  RUN gem install bundler
-</span><span class='line'>  RUN bundle install</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then it adds your gitconfig to the image. This is necessary to provide the same git experience in or outside of the container. As with the <code>Gemfile</code> you&rsquo;ll have to copy your <code>.gitconfig</code> file to the same folder as the <code>Dockerfile</code></p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>ADD .gitconfig /home/blogger/.gitconfig</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And that is it. See the repository mentioned above for the complete Dockerfile.</p>
-
-<h4>Build the docker image</h4>
-
-<p>Everything is ready so you can now build the Docker image.</p>
-
-<ul>
-<li>Get the Dockerfile from Github <code>git clone git@github.com:dirkvanrensburg/octopress2-dockerfile.git octopress-dockerfile</code></li>
-<li>Then copy the <code>Gemfile</code> from the blog repository into the same folder.</li>
-<li>Then copy your <code>.gitconfig</code> file from your home folder into the same folder</li>
-<li>Then in the folder containing you <code>Dockerfile</code> run the following:</li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker build . -t blog/octopress</span></code></pre></td></tr></table></div></figure>
-
-
-<table>
-<thead>
-<tr>
-<th>Flag  </th>
-<th> Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>-t</strong></td>
-<td> Tag the built image with that name. Later you can use the tag to start a container.</td>
-</tr>
-</tbody>
-</table>
-
-
-<p><br/></p>
-
-<p>This command instructs Docker to create a container image using the instructions in the <code>Dockerfile</code>. If all goes well you should see a message saying something like this: <code>Successfully built b847ccd963fa</code></p>
-
-<h4>Test the container</h4>
-
-<p>To test the Docker image, start the container using the following command:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker run --rm -ti blog/octopress /bin/bash</span></code></pre></td></tr></table></div></figure>
-
-
-<table>
-<thead>
-<tr>
-<th>Flag  </th>
-<th> Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>&ndash;rm</strong></td>
-<td> Clean up by removing the contaier and its filesystem when it exits.</td>
-</tr>
-<tr>
-<td><strong>-ti</strong></td>
-<td> Tells docker to create a pseudo TTY for the container and to keep the standard in open so you can send keystrokes to the container.</td>
-</tr>
-</tbody>
-</table>
-
-
-<p><br/>
-The container will start up and your terminal should be attached and in the <code>octopress</code> folder. You should see something like:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>blogger@eba0e6a691ef:/octopress$</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>exit</code> command will exit the container and clean up.</p>
-
-<h3>Rakefile</h3>
-
-<p>In order to preview the blog while working on a post, you need to change the <code>Rakefile</code> in the root of the blog repository to bind the preview server to the IP wildcard <code>0.0.0.0</code>. This makes it possible to access the blog preview in your browser at <code>http://localhost:4000</code></p>
-
-<p><strong>Change</strong></p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  rackupPid = Process.spawn("rackup --port #{server_port}")</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>To</strong></p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  rackupPid = Process.spawn("rackup -o 0.0.0.0 --port #{server_port}")</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Launch the container</h3>
-
-<p>The next step is to launch the container. Execute this command from anywhere, replacing the paths to your blog and .ssh keys:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker run -p 4000:4000 --rm --volume &lt;absolute-path-to-blog-repository&gt;:/octopress --volume &lt;absolute-path-to-user-home&gt;/.ssh:/home/blogger/.ssh -ti blog/octopress /bin/bash</span></code></pre></td></tr></table></div></figure>
-
-
-<table>
-<thead>
-<tr>
-<th>Flag    </th>
-<th> Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>docker run</strong> </td>
-<td> Instructs docker to run a previously built image. <code>blog/octopress</code> in this case</td>
-</tr>
-<tr>
-<td><strong>-p 4000:4000</strong> </td>
-<td> Instructs docker to expose the internal (to the container) port to the host interfaces so that the host can send data to a process listening on that port in the container</td>
-</tr>
-<tr>
-<td><strong>&ndash;rm</strong> </td>
-<td> Tells docker to remove the container and its file system when it exits. We don&rsquo;t need to keep the container around since the blog source is external to the image</td>
-</tr>
-<tr>
-<td><strong>&ndash;volume</strong> </td>
-<td> <code>volume</code> is used to mount folders on the host system into the container. This allow processes in the container to access the files as if they are local to the container. In this case two folders are mounted. The blog repository as <code>/octopress</code> and the local <code>.ssh</code> folder of the host user as <code>/home/blogger/.ssh</code>. The ssh keys are used by git to authenticate and encrypt traffic to and from github. Feel free to change this so that only the github keys are available in the container.</td>
-</tr>
-<tr>
-<td><strong>-ti</strong> </td>
-<td> Tells docker to create a pseudo TTY for the container and to keep the standard in open so you can send keystrokes to the container.</td>
-</tr>
-<tr>
-<td><strong>blog/octopress</strong> </td>
-<td> The name of the image to run. This is the image built earlier using <code>docker build</code></td>
-</tr>
-<tr>
-<td><strong>/bin/bash</strong> </td>
-<td> The command to run when starting the container.</td>
-</tr>
-</tbody>
-</table>
-
-
-<p><br/></p>
-
-<p>Docker will start the container, create a pseudo tty, open standard in and run <code>/bin/bash</code> so that your terminal is now effectively <em>inside</em> the container.</p>
-
-<blockquote><p><small>It is handy to place the command above in a script in the <code>~/bin</code> folder of your user. For example create a file called <code>~/bin/blog</code> and place the command in there. Then you can run <code>blog</code> from any terminal to immediately start and access the container. </small></p></blockquote>
-
-<h3>Do blog stuff</h3>
-
-<p>Now run the Octopress blogging commands as you would if Ruby was installed on your local machine.</p>
-
-<h4>Install theme</h4>
-
-<p>If you created a new Octopress blog then you now have to install your theme. The following installs the default Octopress theme:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake install</span></code></pre></td></tr></table></div></figure>
-
-
-<h4>New post</h4>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake new_post</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Will ask for the post name and create the post file in <code>source/_posts</code></p>
-
-<h4>Preview</h4>
-
-<p>To preview blog posts:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake preview</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then in your browser navigate to <code>http://localhost:4000</code> and you should see the preview of your blog.</p>
-
-<h4>Generate</h4>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake generate</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This will generate the blog into the <code>public</code> folder</p>
-
-<h4>Publish</h4>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake deploy</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This will commit the generated blog and push it to github.</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017/02/16/a-run-around-with-hazelcast/">Hazelcast, JCache and Spring Boot</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-02-16T21:09:39+00:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>16</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>9:09 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p><a href="https://hazelcast.com/">Hazelcast</a> is an in memory data grid which enables data sharing between nodes in a server cluster along with a full set of other data grid features. It also
-implements the <a href="https://jcp.org/aboutJava/communityprocess/final/jsr107/index.html">JCache (JSR107)</a> caching standard so it is ideal for building a data aggregation service.</p>
-
-<p>In this post I&rsquo;ll go through the motions of adding Hazelcast to a Spring Boot REST application and resolving the issues until we have a functioning REST service
-with its response cached in Hazelcast via JCache annotations.</p>
-
-<blockquote><p><small><strong>TLDR;</strong> I suggest reading the post to understand the eventual solution, but if you are impatient see the solution on github:
-<br/>
-* <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache">hazelcast-jcache option 1 and 2</a>
-and<br/>
-* <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3">hazelcast-jcache option 3</a></small></p>
-
-<p><small><strong>UPDATE 1:</strong> It seems that this issue will be resolved soon due to the hard work of <a href="https://github.com/snicoll">@snicoll</a> over at Spring Boot and the Hazelcast community. See the issues:</p>
-
-<ul>
-<li><a href="https://github.com/spring-projects/spring-boot/issues/8467">https://github.com/spring-projects/spring-boot/issues/8467</a></li>
-<li><a href="https://github.com/hazelcast/hazelcast/issues/10007">https://github.com/hazelcast/hazelcast/issues/10007</a></li>
-<li><a href="https://github.com/hazelcast/hazelcast/pull/9973">https://github.com/hazelcast/hazelcast/pull/9973</a>
-</small></li>
-</ul>
-
-
-<p><small><strong>UPDATE 2:</strong> This problem described in this post was fixed in Spring Boot release 1.5.3. Check <a href="https://github.com/dirkvanrensburg/hazelcast-springboot-jcache">this repository</a> for a clean example based on Spring boot 1.5.3.
-I am leaving the post here since it is still interesting due to the different ways the problem could be worked around.</small></p></blockquote>
-
-<h3>Versions</h3>
-
-<table>
-<thead>
-<tr>
-<th>Dependency  </th>
-<th> Version</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Spring Boot </td>
-<td> 1.5.1</td>
-</tr>
-<tr>
-<td>Hazelcast   </td>
-<td> 3.7.5</td>
-</tr>
-</tbody>
-</table>
-
-
-<p><br/></p>
-
-<h3>Spring boot REST</h3>
-
-<p>I am going to assume a working knowledge of building REST services using Spring Boot so I won&rsquo;t be going into too much detail here. Building a REST service in Spring is really easy and
- a quick Google will bring up a couple of tutorials on the subject.</p>
-
-<p>This post will build on top of a basic REST app found on <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/master">github</a>. If you clone that you should be able to
-follow along.</p>
-
-<h3>Adding Hazelcast</h3>
-
-<p>To add Hazelcast to an existing Spring Boot project is very easy. All you have to do is add a dependency on Hazelcast, provide Hazelcast configuration and start using it.</p>
-
-<h4>Step 1</h4>
-
-<p>For maven add the following dependencies to your project <code>pom.xml</code> file:</p>
-
-<figure class='code'><figcaption><span>Hazelcast dependencies in pom file</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='XML'><span class='line'>     <span class="nt">&lt;dependency&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;groupId&gt;</span>com.hazelcast<span class="nt">&lt;/groupId&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;artifactId&gt;</span>hazelcast<span class="nt">&lt;/artifactId&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;/dependency&gt;</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nt">&lt;dependency&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;groupId&gt;</span>com.hazelcast<span class="nt">&lt;/groupId&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;artifactId&gt;</span>hazelcast-spring<span class="nt">&lt;/artifactId&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;version&gt;</span>${hazelcast.version}<span class="nt">&lt;/version&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;/dependency&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h4>Step 2</h4>
-
-<p>I left the following Hazelcast configuration empty to keep things simple for now. Hazelcast will apply defaults for all the settings if you leave the configuration empty.
-You can either provide a <code>hazelcast.xml</code> file on the classpath (e.g. <code>src/main/resources</code>)</p>
-
-<figure class='code'><figcaption><span>XML expample of default Hazelcast configuration </span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='XML'><span class='line'><span class="nt">&lt;hazelcast</span> <span class="na">xsi:schemaLocation=</span><span class="s">&quot;http://www.hazelcast.com/schema/config hazelcast-config-3.7.xsd&quot;</span>
-</span><span class='line'>       <span class="na">xmlns=</span><span class="s">&quot;http://www.hazelcast.com/schema/config&quot;</span>
-</span><span class='line'>       <span class="na">xmlns:xsi=</span><span class="s">&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span><span class="nt">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="nt">&lt;/hazelcast&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>or provide a <code>com.hazelcast.config.Config</code> bean by means of Spring Java configuration like this:</p>
-
-<figure class='code'><figcaption><span>Java example of default Hazelcast configuration</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@Configuration</span>
-</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">HazelcastConfig</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Bean</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="n">Config</span> <span class="nf">getConfig</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">return</span> <span class="k">new</span> <span class="nf">Config</span><span class="o">();</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p><small>The hazelcast config can also be externalised from the application by
-passing the <code>-Dhazelcast.config</code> system property when starting the service.</small></p></blockquote>
-
-<h4>Step 3</h4>
-
-<p>Hazelcast will not start up if you start the application now. The Spring magic happens because of the
-<code>org.springframework.boot.autoconfigure.hazelcast.HazelcastAutoConfiguration</code> configuration class which is conditionally loaded by Spring
-whenever the application context sees that:</p>
-
-<ol>
-<li><code>HazelcastInstance</code> is on the classpath</li>
-<li>There is an unresolved dependency on a bean of type <code>HazelcastInstance</code></li>
-</ol>
-
-
-<p>To start using Hazelcast let&rsquo;s create a special service that will wire in a Hazelcast instance. The service doesn&rsquo;t do anything since it exists only to illustrate how
-Hazelcast is configured and started by Spring.</p>
-
-<figure class='code'><figcaption><span>Illustrate starting Hazelcast by adding a dependency</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@Service</span>
-</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">MapService</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Autowired</span>
-</span><span class='line'>    <span class="kd">private</span> <span class="n">HazelcastInstance</span> <span class="n">instance</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>If you start the application now and monitor the logs you will see that Hazelcast is indeed starting up. You should see something like:</p>
-
-<pre><code>[LOCAL] [dev] [3.7.5] Prefer IPv4 stack is true.                                                                                             
-[LOCAL] [dev] [3.7.5] Picked [192.168.1.1]:5701, using socket ServerSocket[addr=/0:0:0:0:0:0:0:0,localport=5701], bind any local is true   
-[192.168.1.1]:5701 [dev] [3.7.5] Hazelcast 3.7.5 (20170124 - 111f332) starting at [192.168.1.1]:5701                                     
-[192.168.1.1]:5701 [dev] [3.7.5] Copyright (c) 2008-2016, Hazelcast, Inc. All Rights Reserved.                                             
-[192.168.1.1]:5701 [dev] [3.7.5] Configured Hazelcast Serialization version : 1                                                            
-</code></pre>
-
-<p>and a bit further down:</p>
-
-<pre><code>Members [1] {                                                               
-    Member [192.168.1.1]:5701 - f7225da2-a428-4849-944f-43abfb12063a this 
-}                                                                           
-</code></pre>
-
-<blockquote><p><small> This is great! Hazelcast running with almost no effort at all!</small></p></blockquote>
-
-<h3>Add JCache</h3>
-
-<p>Next we want to start using Hazelcast as a JCache provider. To do this add a dependency on <code>spring-boot-starter-cache</code> in your pom file.</p>
-
-<figure class='code'><figcaption><span>Spring Boot Caching dependency in pom file </span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='XML'><span class='line'><span class="nt">&lt;dependency&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;groupId&gt;</span>org.springframework.boot<span class="nt">&lt;/groupId&gt;</span>o
-</span><span class='line'>    <span class="nt">&lt;artifactId&gt;</span>spring-boot-starter-cache<span class="nt">&lt;/artifactId&gt;</span>
-</span><span class='line'><span class="nt">&lt;/dependency&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then, in order to use the annotations, add a dependency on the JCache API</p>
-
-<figure class='code'><figcaption><span>JCache dependency in pom file</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='XML'><span class='line'><span class="nt">&lt;dependency&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;groupId&gt;</span>javax.cache<span class="nt">&lt;/groupId&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;artifactId&gt;</span>cache-api<span class="nt">&lt;/artifactId&gt;</span>
-</span><span class='line'><span class="nt">&lt;/dependency&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Finally to tell Spring to now configure caching add the <code>@EnableCaching</code> annotation to the Spring boot application class. The Spring boot application class is the one
-that is currently annotated with <code>@SpringBootApplication</code></p>
-
-<figure class='code'><figcaption><span>Enable Caching </span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@SpringBootApplication</span>
-</span><span class='line'><span class="nd">@EnableCaching</span>
-</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Application</span> <span class="o">{</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Now something unexpected happens. Starting the application creates two hazelcast nodes which, if your local firewall allows multicast, join up to form a cluster. If multicasting works then you should see
-the following:</p>
-
-<pre><code>Members [2] {
-    Member [192.168.1.1]:5701 - 18383f04-43ac-41fc-a2bc-cd093a9706b6 this
-    Member [192.168.1.1]:5702 - b654cb85-7b59-489d-b599-64ddd2dc0730
-}
-
-2017-02-16 08:41:46.154  INFO 14141 --- [ration.thread-0] c.h.internal.cluster.ClusterService      : [192.168.1.1]:5702 [dev] [3.7.5] 
-
-Members [2] {
-    Member [192.168.1.1]:5701 - 18383f04-43ac-41fc-a2bc-cd093a9706b6
-    Member [192.168.1.1]:5702 - b654cb85-7b59-489d-b599-64ddd2dc0730 this
-}
-</code></pre>
-
-<p>This is saying that there are two Hazelcast nodes running; One on port <code>5701</code> and another on port <code>5702</code> and they have joined to form a cluster.</p>
-
-<blockquote><p><small> This is an unexpected complication, but lets ignore the second instance for now.</small></p></blockquote>
-
-<h3>Caching some results</h3>
-
-<p>Let&rsquo;s see if the caching works. Firstly we have to provide some cache configuration. Add the following to the <code>hazelcast.xml</code> file.</p>
-
-<figure class='code'><figcaption><span>Hazelcast Cache configuration </span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='XML'><span class='line'><span class="nt">&lt;cache</span> <span class="na">name=</span><span class="s">&quot;sumCache&quot;</span><span class="nt">&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;expiry-policy-factory&gt;</span>
-</span><span class='line'>        <span class="nt">&lt;timed-expiry-policy-factory</span> <span class="na">expiry-policy-type=</span><span class="s">&quot;CREATED&quot;</span>
-</span><span class='line'>                                     <span class="na">duration-amount=</span><span class="s">&quot;1&quot;</span>
-</span><span class='line'>                                     <span class="na">time-unit=</span><span class="s">&quot;MINUTES&quot;</span><span class="nt">/&gt;</span>
-</span><span class='line'>    <span class="nt">&lt;/expiry-policy-factory&gt;</span>
-</span><span class='line'><span class="nt">&lt;/cache&gt;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next, to start caching change the <code>sum</code> function in the <code>CalculatorService</code> to:</p>
-
-<figure class='code'><figcaption><span>Cached Sum Service</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@CacheResult</span><span class="o">(</span><span class="n">cacheName</span><span class="o">=</span><span class="s">&quot;sumCache&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="nd">@RequestMapping</span><span class="o">(</span><span class="n">value</span> <span class="o">=</span> <span class="s">&quot;/calc/{a}/plus/{b}&quot;</span><span class="o">,</span> <span class="n">method</span> <span class="o">=</span> <span class="n">RequestMethod</span><span class="o">.</span><span class="na">GET</span><span class="o">)</span>
-</span><span class='line'><span class="kd">public</span> <span class="n">CalcResult</span> <span class="nf">sum</span><span class="o">(</span><span class="nd">@PathVariable</span><span class="o">(</span><span class="s">&quot;a&quot;</span><span class="o">)</span> <span class="n">Double</span> <span class="n">a</span><span class="o">,</span> <span class="nd">@PathVariable</span><span class="o">(</span><span class="s">&quot;b&quot;</span><span class="o">)</span> <span class="n">Double</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>     <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">&quot;******&gt; Calculating %s + %s&quot;</span><span class="o">,</span><span class="n">a</span><span class="o">,</span><span class="n">b</span><span class="o">));</span>
-</span><span class='line'>
-</span><span class='line'>     <span class="k">return</span> <span class="k">new</span> <span class="nf">CalcResult</span><span class="o">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">);</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<ol>
-<li>On <code>line 1</code> we added the <code>@CacheResult</code> annotation to indicate that we want to cache the result of this function and want to place them in the cache called <code>sumCache</code></li>
-<li>On <code>line 4</code> we print a message to standard out so we can see the caching in action</li>
-</ol>
-
-
-<p>Start the application and call the <code>CalculatorService</code> to add two numbers together. You can use <code>curl</code> or simply navigate to the following URL in a browser window</p>
-
-<pre><code>http://localhost:8080/calc/200/plus/100 
-</code></pre>
-
-<blockquote><p><small> <strong>Note:</strong> The port could be something other than 8080. Check the standard out when starting the application for the correct port number</small></p></blockquote>
-
-<p>You&rsquo;ll get the following response</p>
-
-<pre><code>{"result":300.0}
-</code></pre>
-
-<p>and should see this output in standard out:</p>
-
-<pre><code>******&gt; Calculating 200.0 + 100.0
-</code></pre>
-
-<p>Subsequent calls to the service will not print this line,  but if you try again after a minute you&rsquo;ll see the message again.</p>
-
-<blockquote><p>So caching works! But what about the second HazelcastInstance ?</p></blockquote>
-
-<h3>Only one instance</h3>
-
-<p>So you may think that the second Hazelcast instance is due to the example <code>MapService</code> we added earlier. To test that we can disable it by commenting the <code>@Service</code> annotation.
-You can even delete the class if you like, but the application will still start two Hazelcast nodes.</p>
-
-<p>My guess as to what is going on is: When the application context starts, a Hazelcast instance is created by the JCache configuration due to the
-<code>@EnableCaching</code> annotation but this instance is <em>not</em> registered with the Spring context. Later on a new instance is created by the <code>HazelcastAutoConfiguration</code>
-which <em>is</em> managed by Spring and can be injected into other components.</p>
-
-<h3>Solution</h3>
-
-<p>I have found two solutions to the &lsquo;two instance problem&rsquo; so far. Each with its own drawbacks</p>
-
-<h5>Option 1</h5>
-
-<p>I got the following idea from <a href="https://stackoverflow.com/users/5759723/neil-stevenson">Neil Stevenson</a> over on <a href="https://stackoverflow.com/questions/42151600/hazelcast-and-jcache-in-spring-boot-creates-two-instances">stackoverflow</a>.</p>
-
-<figure class='code'><figcaption><span>Disable the Hazelcast auto configuration</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@EnableAutoConfiguration</span><span class="o">(</span><span class="n">exclude</span> <span class="o">=</span> <span class="o">{</span>
-</span><span class='line'>        <span class="c1">// disable Hazelcast Auto Configuration, and use JCache configuration</span>
-</span><span class='line'>    <span class="n">HazelcastAutoConfiguration</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">CacheAutoConfiguration</span>
-</span><span class='line'><span class="o">})</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>Drawback</strong>: You can&rsquo;t use the Hazelcast instance created this way directly. Spring has no knowledge of it, so you can&rsquo;t get it wired in anywhere.</p>
-
-<h5>Option 2</h5>
-
-<p>This as the same effect as option 1 above except that you can use the instance. You have to name the hazelcast instance in the config:</p>
-
-<pre><code>&lt;instance-name&gt;test&lt;/instance-name&gt;
-</code></pre>
-
-<p>and then tell the Spring context to use it by getting it by name:</p>
-
-<figure class='code'><figcaption><span>Bring the instance into Spring</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@Bean</span>
-</span><span class='line'><span class="kd">public</span> <span class="n">HazelcastInstance</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">return</span> <span class="n">Hazelcast</span><span class="o">.</span><span class="na">getHazelcastInstanceByName</span><span class="o">(</span><span class="s">&quot;test&quot;</span><span class="o">);</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>Drawback</strong>: This relies on the order of bean creation so I can only say that it works in Spring Boot 1.5.1.</p>
-
-<h5>Option 3</h5>
-
-<p>The best solution so far is to set and instance name as in Option 2 above and then setting the <code>spring.hazelcast.config=hazelcast.xml</code> in the <code>application.properties</code> file.</p>
-
-<p>see: <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3">hazelcast-jcache-option3</a></p>
-
-<h3>Conclusion</h3>
-
-<p>I personally think that option 3 is the best approach. That gives you the best of both worlds with minimum configuration.</p>
-
-<p>Spring Boot can be a bit magical at times and doesn&rsquo;t always do exactly what you would expect, but there is always a way to tell it to get out of the way and do
-it yourself. The people over at Spring are working hard to make everything &lsquo;just work&rsquo; and I am confident that these things will be ironed out over time.</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017/01/11/java-double-and-nan/">Java Double and NaN Weirdness</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-01-11T01:08:52+00:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>11</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>1:08 am</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>We learn something everyday. We don&rsquo;t always realise it, but we do. Sometimes the thing you learn isn&rsquo;t new at all, but something you sort of knew
-but never really thought about too much.</p>
-
-<p>I recently learned that my understanding of what causes a <code>NaN</code> value in Java&rsquo;s <code>double</code> was wrong.</p>
-
-<h2>The story</h2>
-
-<p>I was working on an integration project and received a bug report on one of my services. The report said that my service is returning an HTTP code &lsquo;500&rsquo; for a specific input message.</p>
-
-<p>During my investigation I found the cause of the exception was an unexpected value returned from a down stream service. It was a SOAP service which returned something like the following in its XML response:</p>
-
-<pre><code>&lt;SomeNumberField type="number"&gt;NaN&lt;/SomeNumberField&gt;
-</code></pre>
-
-<p>I was a bit surprised to see the <code>NaN</code> there since I would expect them to either leave the field off or set it to <code>null</code> if they don&rsquo;t have a value. This looked like a calculation bug since we all know that, in Java and C# at least, dividing a double with 0 results in a <code>NaN</code>. (<em>Spoiler: It doesn&rsquo;t</em>)</p>
-
-<p>However, this got me thinking and I tried to remember what I know about <code>double</code>and <code>NaN</code>. This resulted in an embarrisingly deep spiral down the rabbit hole.</p>
-
-<h2>NaN</h2>
-
-<p>Well if you think about it <code>NaN</code> is kind of like a number in this case, even though NaN means Not-a-Number. It exists to enable calculations with indeterminate results to be represented as a &ldquo;number&rdquo; in the set of valid <code>double</code> values. Without <code>NaN</code> you could get completely wrong results or you&rsquo;ll get an exception, which isn&rsquo;t ideal either. <code>NaN</code> is defined, same as <code>Infinity</code>, to be part of the set of valid doubles.</p>
-
-<pre><code>System.out.println(Double.isNaN(Double.NaN)); //true
-System.out.println(Double.POSITIVE_INFINITY == Double.POSITIVE_INFINITY); //true
-System.out.println(Double.NEGATIVE_INFINITY == Double.NEGATIVE_INFINITY); //true
-</code></pre>
-
-<p>I played around with <code>double</code> a bit and I thought to share it in a post, because I think the various edge cases of <code>double</code> are interesting.</p>
-
-<p>I started with the following experiment:</p>
-
-<pre><code>//Lets make a NaN!
-double NaN = 5.0/0;
-System.out.println("NaN: " + NaN);
-
-&gt;&gt; NaN: Infinity
-</code></pre>
-
-<p><strong>Wait. What?</strong></p>
-
-<p>Turns out that I have lived with this misconception about what happens when you divide a double by zero. I seriously expected that a <code>double</code> divided by 0 is <code>NaN</code>. Well it turns out I was wrong. You get:</p>
-
-<blockquote><p>POSITIVE_INFINITY</p></blockquote>
-
-<pre><code>double infinity = 5.0/0;
-System.out.println((infinity == Double.POSITIVE_INFINITY)); //true
-</code></pre>
-
-<p>I can sort of rationalise that the answer could be infinity because you are dividing something largish with something much much smaller. In fact, dividing it by nothing so you could argue the result of that should be infitely large. Although, mathematically this does not make any sense. x/0 is undefined since there is no number that you can multiply with 0 to get back to x again. (for x &lt;> 0)</p>
-
-<p>Anyway lets play with <code>NaN</code> a bit.</p>
-
-<pre><code>double NaN = Double.NaN;
-System.out.println("NaN: " + NaN); //NaN: NaN
-
-System.out.println((NaN + 10)); //(NaN + 10): NaN
-System.out.println((NaN - 10)); //(NaN - 10): NaN
-System.out.println((NaN - NaN)); //NaN - NaN: NaN
-System.out.println((NaN / 0));     //NaN / 0: NaN
-System.out.println((NaN * 0));     //NaN * 0: NaN
-</code></pre>
-
-<p>Well no surprises here. Once a NaN always a NaN.</p>
-
-<blockquote><p>I used <code>Double.NaN</code> above to be sure I have a <code>NaN</code> but if you want to make one yourself then calculating the square root of a negative number is an easy way:</p></blockquote>
-
-<pre><code>System.out.println((Math.sqrt(-1))); //NaN
-</code></pre>
-
-<h2>Max and Min value</h2>
-
-<p>Before we get to infinity let take a quick look at <code>Double.MAX_VALUE</code> and <code>Double.MIN_VALUE</code>. These are special constants defined on <code>Double</code> which you can use to check if a number is at the maximum of what a double can represent. If a number is equal to <code>Double.MAX_VALUE</code> it means that it is about to overflow into <code>Double.POSITIVE_INFINITY</code>. The same goes for <code>Double.MIN_VALUE</code> except that it will overflow to <code>Double.NEGATIVE_INFINITY</code>.</p>
-
-<p>Something to note about <code>double</code> is that it can represent ridiculously large numbers using a measly 64 bits. The maximum value is larger than <code>1.7*10^308</code> !</p>
-
-<pre><code>System.out.println("Double.MAX_VALUE is large! : " + (Double.MAX_VALUE == 1.7976931348623157 * Math.pow(10,308)));
-
-&gt; Double.MAX_VALUE is large! : true
-</code></pre>
-
-<p>It can represent these large numbers because it encodes numbers as a small real number multiplied by some exponent. See the <a href="https://en.wikipedia.org/wiki/IEEE_754-1985">IEEE spec</a></p>
-
-<p>Let&rsquo;s see what it takes to make <code>Double.MAX_VALUE</code> overflow to infinity.</p>
-
-<pre><code>double max = Double.MAX_VALUE;
-
-System.out.println((max == (max + 1))); //true
-System.out.println((max == (max + 1000))); //true
-System.out.println("EVEN...");
-System.out.println((max == (max + Math.pow(10,291)))); //true
-
-System.out.println("HOWEVER...");
-System.out.println((max == (max + Math.pow(10,292)))); //false
-System.out.println((max + Math.pow(10,292))); //Infinity
-</code></pre>
-
-<p>This ability to represent seriously large numbers comes at a price of accuracy. After a while only changes in the most significant parts of the number can be reflected. As seen in the following code snippet:</p>
-
-<pre><code>double large_num = Math.pow(10,200);
-System.out.println("large_num == (large_num + 1000): " + (large_num == (large_num + 1000))); //true
-</code></pre>
-
-<p>At large integer values the steps between numbers are very very large since the double has no place to record the change if it doesn&rsquo;t affect its most 16 most significant digits. As shown above 1000 plus a very large number is still that same very large number.</p>
-
-<h2>Infinity</h2>
-
-<p>Java&rsquo;s <code>double</code> supports two kinds of infinity. Positive and negative inifity. The easiest to make those are by dividing by 0.</p>
-
-<pre><code>double pos_infinity = 5.0/0;
-System.out.println("POSITIVE_INFINITY == pos_infinity: " + (Double.POSITIVE_INFINITY == pos_infinity));
-
-double neg_infinity = -5.0/0;
-System.out.println("NEGATIVE_INFINITY == neg_infinity: " + (Double.NEGATIVE_INFINITY == neg_infinity));
-</code></pre>
-
-<p>In maths infinity is a numerical concept representing the idea of an infinitly large number. It is used, for example in calculus, to describe an <a href="http://khanacademy.wikia.com/wiki/Limits_at_infinity_where_x_is_unbounded">unbounded limit</a> - some number that can grow without bound.</p>
-
-<p>In this case things are pretty much the same as in maths, where POSITIVE_INFINITY and NEGATIVE_INFINITY are used to represent numbers that
-are infinitely large. However they function more as a way to know something went wrong in your calculation. You are either trying to calculate something that is too large to store in a <code>double</code> or there is some bug in the code.</p>
-
-<p>There are once again some interesting things to note when playing with positive and negative infinity.</p>
-
-<pre><code>double pos = Double.POSITIVE_INFINITY;
-
-System.out.println("POSITIVE_INFINITY + 1000 = " + (pos + 1000));
-System.out.println("POSITIVE_INFINITY + 10^1000 = " + (pos + Math.pow(10,1000)));
-System.out.println("POSTIVE_INFINITY * 2 = " + (pos * 2));
-</code></pre>
-
-<p>Once the value is infinity it stays there even if you add or substract rediculously large numbers. However there is one interesting case, when you substract infinity from infinity:</p>
-
-<pre><code>double pos = Double.POSITIVE_INFINITY;
-double neg = Double.NEGATIVE_INFINITY;
-
-System.out.println("POSITIVE_INFINITY - POSITIVE_INFINITY = " + (pos - pos));
-System.out.println("POSITIVE_INFINITY + NEGATIVE_INFINITY = " + (pos + neg));
-</code></pre>
-
-<p>Subtracting infinity from infinity yields <code>NaN</code> and as you would expect adding or subtracting <code>NaN</code> yields a <code>NaN</code> again.</p>
-
-<pre><code>System.out.println("POSTIVE_INFINITY + NaN" + (pos + Double.NaN));
-System.out.println("POSTIVE_INFINITY - NaN" + (pos - Double.NaN));
-</code></pre>
-
-<h2>In closing</h2>
-
-<p>Both Java&rsquo;s <code>float</code> and <code>double</code> types follow the <a href="https://en.wikipedia.org/wiki/IEEE_754-1985">IEEE 754-1985</a> standard for representing floating point numbers. I am not going to go into great detail on the internals of <code>double</code>, but it suffice to say that <code>double</code> and <code>float</code> are not perfectly accurate when you use them to perform arithmetic. The Java <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html">primitive type documentation</a> says:</p>
-
-<blockquote><p>This data type should never be used for precise values, such as currency. For that,
-  you will need to use the java.math.BigDecimal class instead.</p></blockquote>
-
-<p>If precision is you main concern then it is generally better to stick with good old <code>java.math.BigDecimal</code>. BigDecimal is immutable which makes it nice to work with, but the most important thing is precision. You have absolute control over number precision, without the rounding or overflow surprises you get with <code>double</code> and <code>float</code>. However, if performance is the main concern it is better to stick with <code>float</code> or <code>double</code> and live with the inaccuracies.</p>
-
-<p>For more information on how Java handles NaN, infinity and rouding read the documentation <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-4.html#jls-4.2.4">here</a>.</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/">Extending Metrics for Complex Dashboards in AppDynamics</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-11-28T15:16:35+00:00'><span class='date'><span class='date-month'>Nov</span> <span class='date-day'>28</span><span class='date-suffix'>th</span>, <span class='date-year'>2014</span></span> <span class='time'>3:16 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h3>Overview</h3>
-
-<p>Some time ago, I was tasked to replicate one of our client&rsquo;s <a href="http://www.ca.com/us/opscenter/ca-application-performance-management.aspx" title="CA Application Performance Management">Wily Introscope</a> dashboards in <a href="http://www.appdynamics.com" title="AppDynamics">AppDynamics</a>. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/wily_dashboard.png" title="Example of the Wily Dashboard" ></p>
-
-<p>The status light colours were assigned as follows:</p>
-
-<table>
-<thead>
-<tr>
-<th> <strong>Status</strong>    </th>
-<th>        <strong>Meaning</strong>                                    </th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td> GREY      </td>
-<td> No activity since 5am this morning                    </td>
-</tr>
-<tr>
-<td> RED       </td>
-<td> No activity in the last hour, but something since 5 am    </td>
-</tr>
-<tr>
-<td> YELLOW    </td>
-<td> No activity in the last 10 minutes, but some in the last hour </td>
-</tr>
-<tr>
-<td> GREEN     </td>
-<td> Activity in the last 10 minutes               </td>
-</tr>
-</tbody>
-</table>
-
-
-<p>&nbsp;<br/>
-The data for each light was gathered by Introscope using custom instrumentation points looking for calls to a particular POJO method. The first parameter to this method was the client identifier, so Introscope collected metrics for each call to this method grouping it by 10 minutes, 1 hour and 1 day.</p>
-
-<p>In this post I will describe what I did to reproduce the dashboard in AppDynamics. Even though it is a rather hacky work around, it is still interesting. The solution works by extracting metrics from AppDynamics using the REST API and sending it back in as new metrics, which can be used by health rules to drive status lights.</p>
-
-<p><em>The code and examples in this post is from an example application built to illustrate the solution more clearly.</em></p>
-
-<p><em>See github: <a href="https://github.com/dirkvanrensburg/blogs-appd-metrics-for-dashboards">https://github.com/dirkvanrensburg/blogs-appd-metrics-for-dashboards</a></em></p>
-
-<h3>Status lights in AppDynamics</h3>
-
-<p>The status light in AppDynamics relies on a health rule to drive the state of the light. The AppDynamics status light is green by default, to indicate no health rule violations. Yellow for WARNING rule violations and Red for CRITICAL rule violations. The status light in Introscope is grey when there is no data, so it essentially has four states compared to the three states available in AppDynamics.</p>
-
-<p>As mentioned, the AppDynamics status light uses one health rule, which means you cannot tie the different colours of the light to metrics gathered over different time ranges. The time range for the light is determined by the setting on the widget or the dashboard, where the Introscope status light can use separate metrics for each status.</p>
-
-<h3>Getting the information</h3>
-
-<p>The first step to solving the problem is to gather the information we need to display. We can look at the Introscope probe configuration to see what it uses for for the status light:</p>
-
-<pre><code>TraceOneMethodWithParametersOfClass: SomeCentralClass loadItems(Ljava/lang/String;)V BlamedMethodRateTracer "SYS|Service By Client|{0}:Invocations Per Second"
-</code></pre>
-
-<p>This means that Introscope will count the invocations per second of a method called <strong>loadItems</strong>, on an instance of the class <strong>SomeCentralClass</strong> and group this count by the client identifier <em>(the String parameter to loadItems)</em>.</p>
-
-<h4>Information points</h4>
-
-<p>To capture that type of information in AppDynamics you use <a href="https://docs.appdynamics.com/display/PRO39/Configure+Code+Metric+Information+Points" title="AppDynamics Information Points">information points</a>. Information points tracks calls to a method on a POJO and collects metrics such as <em>Calls Per Minute</em> and <em>Average Response Time</em>. AppDynamics does not allow information points to be <em>&ldquo;split&rdquo;</em> by parameter in a generic way. That means to get the required information, we have to create an information point for every client.</p>
-
-<p>You create information points by opening the <em>Information Points</em> view from the side menu and clicking on <em>New</em></p>
-
-<pre><code>Analyse -&gt; Information Points -&gt; New
-</code></pre>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/information_points.png" title="Information Points in AppDynamics" ></p>
-
-<p>Information points track calls to specific methods so you need to provide the <em>class name</em>, <em>method name</em> of the method to collect metrics for. In this case we want separate informations points based on the parameter to the method call, so we need to set a <em>match condition</em></p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/capture_information_point.png" title="Capture Information Point" ></p>
-
-<p>The information point will then start collecting data for <em>Average Response Time</em>, <em>Calls per minute</em>, and <em>Errors per minute</em> as seen on the following dashboard view.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/infopoint_metrics.png" title="Information Point Metrics" ></p>
-
-<p>Once defined, the information points are also available in the metric browser where you can plot the different metrics of each information point on the same graph. The following image shows the <em>Average Response Time</em> for <strong>CLIENT2</strong> and <strong>CLIENT4</strong></p>
-
-<pre><code>Analyse -&gt; Metric Browser
-</code></pre>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/infopoints_metricbrowser.png"></p>
-
-<h3>Using the REST API</h3>
-
-<p>The AppDynamics controller provides a <a href="https://docs.appdynamics.com/display/PRO39/Use+the+AppDynamics+REST+API" title="AppDynamics REST API">REST API</a>, which enables you to programmatically extract information out of the controller and, in the case of configuration, send information to the controller. This means that we can call the controller to get the metric information of the information points we just configured. The URL to an information point metric can be retrieved from the metric browser. Right click on the information point and the metric you are interested in, <em>Calls per Minute</em> in our case, and select <em>Copy REST URL</em></p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/get_rest_url.png" title="&#34;Rest URL from metric browser&#34;" alt="&#34;Rest URL from metric browser&#34;"></p>
-
-<p>This will copy the URL to the clipboard and you can test it by pasting it into a new tab in your web browser. You should see something like this</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/rest_results_example.png" title="&#34;Example REST results&#34;" alt="&#34;Example REST results&#34;"></p>
-
-<p>The URL can be changed to get the information over different time ranges by changing the <em>time-range-type</em> and <em>duration-in-mins</em> fields. The <em>time-range-type</em> field is used to get information relative to a point in time, so for example it can be used to get information for the last 15 minutes or for the 30 minutes after 10 am this morning. We can use this to get the information we are after out of AppDynamics. We can get the number of times each client called the service in the last 10, 60 or 960 minutes by changing these fields and calling the controller.</p>
-
-<p>Having the information available as a REST service call is one thing, but we need it <em>in</em> the controller so we can create a dashboard. It is of no real use on the outside. To get metrics into the controller we need to use the Standalone Machine Agent.</p>
-
-<h3>The Standalone Machine Agent</h3>
-
-<p>The <a href="https://docs.appdynamics.com/display/PRO39/Standalone+Machine+Agent">Standalone Machine Agent</a> is a Java application whose primary function is to monitor machine statistics such as CPU, Memory utilisation and Disk IO. It also provides a way to send metrics into AppDynamics by means of a <a href="https://docs.appdynamics.com/display/PRO39/Add+Metrics+with+a+Monitoring+Extension">Monitoring Extension</a>. The extension can supplement the existing metrics in AppDynamics by sending your custom metrics to the controller. A custom metric can be common across the nodes or associated with a specific tier. You specify the path, as seen in the metric browser, where the metrics should be collected relative to the root <em>Custom Metrics</em></p>
-
-<h4>Get the information out</h4>
-
-<p>As mentioned before the metrics we are interested in can be extracted from the AppDynamics controller using the REST API and using the Standalone Machine Agent we can create new metrics, which we can use for the dashboard. Using the following REST API call, we can get the metrics captured by our information points rolled up to the different time ranges. The call below will get the <em>Calls per Minute</em> metric of <em>CLIENT1</em></p>
-
-<pre><code>http://controller:8090/controller/rest/applications/ComplexDashboardTest/metric-data?metric-path=Information Points|C1|Calls per Minute&amp;time-range-type=BEFORE_NOW&amp;duration-in-mins=10
-</code></pre>
-
-<p>By calling the above REST call multiple times for every client we can get values for <em>Calls per Minute</em> rolled up over the periods we are interested in (10, 60 and 960 minutes). However, just getting the values of the last 960 minutes (16 hours) is not good enough since it will give incorrect values early in the day. Before 13h00 it could still pick up calls from the previous day, so we need a different approach.  To do this we change the <em>time-range-type</em> to <strong>AFTER_TIME</strong> and provide a start time of 5am the morning. This will then only return values for the 960 minutes after 5am.</p>
-
-<p>The following REST call will do that - replace the <strong>${timeat5am}</strong> value with the UNIX time for 5am of that day.</p>
-
-<pre><code>http://controller:8090/controller/rest/applications/ComplexDashboardTest/metric-data?metric-path=Information Points|C1|Calls per Minute&amp;time-range-type=AFTER_TIME&amp;start-time=${timeat5am}000&amp;duration-in-mins=960
-</code></pre>
-
-<h4>Send the information back in</h4>
-
-<p>To send the information back in we need to actually create the monitoring extension, which essentially is a script which the Standalone machine agent will call periodically and any values the script writes to standard output will be forwarded to the controller. We want the script to send metrics such as the following:</p>
-
-<pre><code>name=Custom Metrics|Information Points|CLIENT1|Calls per 10 Minutes,value=0
-name=Custom Metrics|Information Points|CLIENT1|Calls per 60 Minutes,value=2
-name=Custom Metrics|Information Points|CLIENT1|Calls per 960 Minutes,value=2
-name=Custom Metrics|Information Points|CLIENT2|Calls per 10 Minutes,value=0
-name=Custom Metrics|Information Points|CLIENT2|Calls per 60 Minutes,value=1
-name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
-
-...And so on for all the clients
-</code></pre>
-
-<p>Once we have the extension installed and reporting, the new metrics will show up in the AppDynamics metric browser at the following location, assuming the machine agent is reporting for the tier called <em>&lsquo;OneTier&rsquo;</em>.</p>
-
-<pre><code>Application Infrastructure Performance -&gt; OneTier -&gt; Custom Metrics
-</code></pre>
-
-<p>There will be a section for each client (<strong>CLIENT1</strong> to <strong>CLIENTx</strong>) and each will have a metric for each of the time ranges we are interested in (10, 60 and 960 minutes)</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/new_metrics_in_browser.png" title="&#34;The new metrics displayed in the browser&#34;" alt="&#34;The new metrics displayed in the browser&#34;"></p>
-
-<h3>Health Rules</h3>
-
-<p><a href="https://docs.appdynamics.com/display/PRO39/Health+Rules">Health Rules</a> provides a way to specify conditions which the system will consider WARNING or CRITICAL conditions. You specify the metric to monitor and the threshold or baseline to compare it to for both the WARNING and CRITICAL condition.</p>
-
-<p>We can now create health rules to track these metrics, so that the dashboard lights can show how recently a particular client accessed the system. To create a health rule we use the side menu in the AppDynamics controller.</p>
-
-<pre><code>Alert &amp; Response -&gt; Health Rules -&gt; (click on +)
-</code></pre>
-
-<p>First specify a name for the rule, the type of metric we will use and the time range to use when evaluating the health rule. The last 5 minutes is good enough since the machine agent will send a value every minute and the value it sends is already summed over the period in question.</p>
-
-<p>We need to create one health rule for every client
-<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_step1.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
-
-<p>The WARNING condition is raised if there were no calls in the last 10 minutes, but some in the last 60 minutes.
-<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_warning.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
-
-<p>The CRITICAL condition is raised if there were no calls in the last 60 minutes.
-<img class="center" src="/images/ext_metrics_complex_dashboards_appd/health_rule_critical.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
-
-<h3>Putting it all together</h3>
-
-<p>Now we have all the information we need to start assembling the dashboard. Status lights only work on <em>Custom Dashboard</em> as opposed to <em>Node/Tier Dashboards</em>. To create a <em>Custom Dashboard</em> we click on the AppDynamics logo at the left top an choose <em>Custom Dashboards</em></p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/select_custom_dashboards.png" title="&#34;Create Custom Dashboard&#34;" alt="&#34;Create Custom Dashboard&#34;"></p>
-
-<p>Next we create a new dashboard by clicking on the <em>Create Dashboad</em> and set the layout of the canvas to <strong>absolute</strong>. This is because the grid layout does not support metric labels on top of other widgets and we need this to complete the dashboard.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/create_absolute_dashboard.png" title="&#34;Create new Dashboard&#34;" alt="&#34;Create new Dashboard&#34;"></p>
-
-<p>Put a label with the text <em>Client Access</em> and place it at the top of the dashboard, add a label for the first status light with the text <em>CLIENT 1</em> and then add the status light for client 1. The status light is linked to the health rule for <em>CLIENT1</em> by selecting it in the status light properties.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_first_statuslight.png" title="&#34;Status light properties&#34;" alt="&#34;Status light properties&#34;"></p>
-
-<p>We can now repeat these steps for the remaining 5 clients, linking each to the appropriate health rule, and finally the dashboard looks like this</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard.gif" title="&#34;All the status lights&#34;" alt="&#34;All the status lights&#34;"></p>
-
-<p>As mentioned at the start of the post, the Introscope status light can be in four states and the AppDynamics status light only three. To represent the fourth state we can put the value of the <em>Calls per 960 Minutes</em> metric on the status light as a dynamic label.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/metric_label_call_960.png" title="&#34;Metric label&#34;" alt="&#34;Metric label&#34;"></p>
-
-<p>The label background is set as transparent, and sized so that it will fit on the status light for client 1. After adding a metric label for each client, the dashboard is complete. We now have a fully functional dashboard which displays the same information as the original Introscope dashboard. In fact, it shows a little more information because we added the <em>&lsquo;calls today&rsquo;</em> label on the status to make up for the missing fourth state. Knowing the number of calls for the day is much better than just having a red light meaning <em>&lsquo;some calls today but nothing in the last hour&rsquo;</em>.</p>
-
-<p><img class="center" src="/images/ext_metrics_complex_dashboards_appd/client_access_dashboard_final.gif" title="&#34;Completed Dashboard&#34;" alt="&#34;Completed Dashboard&#34;"></p>
-
-<h3>Conclusion</h3>
-
-<p>Using the AppDynamics REST API and Standalone Machine Agent allows you to do powerful enrichment of the metric information in AppDynamics. You could, for example, monitor an internal legacy system through a custom built API and combine that data with information already captured by AppDynamics. This can then be stored as a new metric which you can use to visualise the data.</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/06/22/split-business-transactions-on-oracle-osb-using-appdynamics/">Split Business Transactions on Oracle Service Bus Using AppDynamics</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2014-06-22T14:00:00+00:00'><span class='date'><span class='date-month'>Jun</span> <span class='date-day'>22</span><span class='date-suffix'>nd</span>, <span class='date-year'>2014</span></span> <span class='time'>2:00 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h3>Overview</h3>
-
-<p><a href="http://www.ecetera.com.au">We</a> recently helped a customer configure AppDynamics to monitor their business transactions on <a href="http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html">Oracle OSB</a>. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky.</p>
-
-<p>The OSB was accepting SOAP messages from a proprietary upstream system all on one endpoint. It then inspected the message and called one or more services on the OSB, essentially routing the incoming messages. AppDynamics grouped all these messages as one business transaction because they all arrived at the same endpoint. This was not acceptable as a significant number of distinct business transactions were processed this way. We had to find a way to separate the business transaction using the input data.</p>
-
-<p>Changing the application was not an option so, we solved this by augmenting the <em>application server</em> code to give AppDynamics an efficient way to determine the business transaction name. The rest of this article describes how AppDynamics was used to find a solution, and how we improved the solution using custom byte code injection.</p>
-
-<h3>Example Application</h3>
-
-<p>An example OSB application which reproduces the design of the actual application is used to illustrate the problem and solution.</p>
-
-<p><img class="center" src="/images/split_bt_on_OSB_AppD/example_osb_proxy_service.png" title="Example Application" ></p>
-
-<h3>Finding the business transactions</h3>
-
-<p>It is a bit tricky to find the business transactions for this application because the services on Oracle OSB are all implemented by configuring the same Oracle classes. Each Proxy Service is just another instance of the same class and the call graph in the transaction snapshot is full of generic sounding names like <em>&lsquo;AssignRuntimeStep&rsquo;</em></p>
-
-<p><img class="center" src="/images/split_bt_on_OSB_AppD/callgraph.png" title="Proxy Service call graph" ></p>
-
-<p>The first step to figuring out how to separate the business transactions is using the AppDynamics <a href="http://docs.appdynamics.com/display/PRO14S/Configure+Data+Collectors">Method Invocation Data Collector</a> feature. This gives you a way to inspect the method parameters in the call and printing their values. Method invocation data collectors allows you to configure AppDynamics to capture the value of a parameter for a particular method invocation. Not only the value of the parameter but it is possible to apply a chain of get- methods to the parameter.</p>
-
-<p>The following figure shows data collector configuration to get information out of the parameters passed to the <em>processMessage</em> method on the <em>AssignRuntimeStep</em> class we noticed in the call graph. This data collector tells AppDynamics to capture the first parameter to the <em>processMessage</em> method on the class <em>AssignRuntimeStep</em> and then to collect the result of calling <em>toString()</em> and <em>getClass().getName()</em> on that parameter.</p>
-
-<p><img class="center" src="/images/split_bt_on_OSB_AppD/method_invocation_data_collector.png" title="Method Invocation Data Collector" ></p>
-
-<p>The results of this can be seen in the following images. The first shows the result of the <em>toString()</em> applied to the first parameter</p>
-
-<p><img class="center" src="/images/split_bt_on_OSB_AppD/user_data1.png"></p>
-
-<p>and the second shows the class of the parameter. Notice that the class name is repeated three times. It is a list of values, one value saved for every invocation of the <em>processMessage</em> method.</p>
-
-<p><img class="center" src="/images/split_bt_on_OSB_AppD/user_data2.png"></p>
-
-<p>From the first image it is obvious that the input message is contained in the first parameter. You can also see that the messages is stored in a map like structure and the key is called <em>body</em>. Note that the business transaction name is visible in the first image <strong>TranactionName=&ldquo;Business Transaction1&rdquo;</strong>. The second image shows the type of the first parameter so the message is contained in an object of class <em>MessageContextImpl</em>.</p>
-
-<p>The next step is to tell AppDynamics what to use for splitting the business transactions and this can be done by using a <a href="http://docs.appdynamics.com/display/PRO14S/Match+Rule+Conditions">Business Transaction Match Rule</a>. The number of characters from the start of the message to the field we are interested in are roughly <strong>126</strong> and assuming the transaction names will be around 20 characters we can set up a match rule as follows:</p>
-
-<p><img class="center" src="/images/split_bt_on_OSB_AppD/new_bt_match_rule_1.png" title="New Business Transaction Match Rule" >
-<img class="center" src="/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_1.png" title="New Business Transaction Match Rule - Split" ></p>
-
-<p>Note the number of arguments (2) set in the above image. That value is important and the transactions will not show up at all if the wrong value is used. We determined the value by decompiling the Weblogic class but you can always do it by first trying 1 and then 2.</p>
-
-<p>With the above configuration in place the AppDynamics agent is able to pick up the different transactions. The transaction names aren&rsquo;t perfect but it works!</p>
-
-<p><img class="center" src="/images/split_bt_on_OSB_AppD/discovered_business_transactions.png" title="Discovered business transactions" ></p>
-
-<h3>Optimise and get the correct name</h3>
-
-<p>This solution is OK, but it has a few issues. Firstly the transaction names are either cut off or include characters that are not part of the transaction name. It is also not very efficient, because it requires the entire <em>MessageContextImpl</em> instance to be serialised as a String just to extract a small part of it. To improve this we need to add custom code to the <em>MessageContextImpl</em> class so that we can access the data in a more efficient way.</p>
-
-<p>Consider the following Java code to search a string for the transaction name:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'> <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">SEARCH_TOKEN</span> <span class="o">=</span> <span class="s">&quot;TransactionName=\&quot;&quot;</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">private</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">getTransactionType</span><span class="o">(</span><span class="n">String</span> <span class="n">input</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>      <span class="kt">int</span> <span class="n">startIndex</span> <span class="o">=</span> <span class="n">input</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">SEARCH_TOKEN</span><span class="o">);</span>              
-</span><span class='line'>      <span class="kt">int</span> <span class="n">endIndex</span> <span class="o">=</span> <span class="n">startIndex</span><span class="o">;</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="n">startIndex</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>                  
-</span><span class='line'>      
-</span><span class='line'>      <span class="n">startIndex</span> <span class="o">+=</span> <span class="n">SEARCH_TOKEN</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>             <span class="c1">//Jump to the open quote</span>
-</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="n">startIndex</span> <span class="o">&lt;</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span><span class="o">()</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">endIndex</span> <span class="o">=</span> <span class="n">input</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="s">&quot;\&quot;&quot;</span><span class="o">,</span> <span class="n">startIndex</span><span class="o">);</span>       <span class="c1">//Find the end quote</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="k">if</span> <span class="o">(</span><span class="n">endIndex</span> <span class="o">&gt;</span> <span class="n">startIndex</span> <span class="o">&amp;&amp;</span> <span class="n">endIndex</span> <span class="o">&lt;</span> <span class="n">input</span><span class="o">.</span><span class="na">length</span><span class="o">())</span> <span class="o">{</span>     
-</span><span class='line'>          <span class="k">return</span> <span class="n">input</span><span class="o">.</span><span class="na">substring</span><span class="o">(</span><span class="n">startIndex</span><span class="o">,</span> <span class="n">endIndex</span><span class="o">);</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      
-</span><span class='line'>      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-</span><span class='line'>  <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This is a statically accessible piece of code that will extract the transaction name from an arbitrary string. It first tries to find the token in the input string. Once the token is found it determines the open and end quote positions and returns the transaction name. If nothing is found then return <em>null</em>.</p>
-
-<p>The next step is to write some Java code that can use the above code without loading the entire string into memory.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'> <span class="kd">public</span> <span class="kd">static</span> <span class="kt">short</span> <span class="n">WITHIN</span> <span class="o">=</span> <span class="mi">512</span><span class="o">;</span>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">short</span> <span class="n">BUFFER_SIZE</span> <span class="o">=</span> <span class="mi">256</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">getTransactionType</span><span class="o">(</span><span class="n">InputStream</span> <span class="n">inputStream</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>      <span class="n">String</span> <span class="n">result</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-</span><span class='line'>      <span class="n">BufferedReader</span> <span class="n">reader</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">reader</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">BufferedReader</span><span class="o">(</span><span class="k">new</span> <span class="nf">InputStreamReader</span><span class="o">(</span><span class="n">inputStream</span><span class="o">),</span> <span class="n">BUFFER_SIZE</span><span class="o">);</span>
-</span><span class='line'>          <span class="kt">int</span> <span class="n">read</span><span class="o">,</span> <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-</span><span class='line'>
-</span><span class='line'>          <span class="c1">//Read up to BUFFER_SIZE and then stop</span>
-</span><span class='line'>          <span class="n">StringBuilder</span> <span class="n">sb</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">StringBuilder</span><span class="o">();</span>
-</span><span class='line'>          <span class="kt">boolean</span> <span class="n">stop</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-</span><span class='line'>          <span class="k">do</span> <span class="o">{</span>
-</span><span class='line'>              <span class="kt">char</span><span class="o">[]</span> <span class="n">cbuf</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">char</span><span class="o">[</span><span class="n">BUFFER_SIZE</span><span class="o">];</span>
-</span><span class='line'>
-</span><span class='line'>              <span class="n">read</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">cbuf</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">BUFFER_SIZE</span><span class="o">);</span>
-</span><span class='line'>              <span class="k">if</span><span class="o">(</span><span class="n">read</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>                  <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">cbuf</span><span class="o">);</span>
-</span><span class='line'>
-</span><span class='line'>                  <span class="c1">//Search for the transaction type in the buffer</span>
-</span><span class='line'>                  <span class="n">result</span> <span class="o">=</span> <span class="n">getTransactionType</span><span class="o">(</span><span class="n">sb</span><span class="o">.</span><span class="na">toString</span><span class="o">());</span>
-</span><span class='line'>
-</span><span class='line'>                  <span class="n">total</span> <span class="o">=</span> <span class="n">total</span> <span class="o">+</span> <span class="n">read</span><span class="o">;</span>
-</span><span class='line'>                  <span class="n">stop</span> <span class="o">=</span> <span class="n">stop</span> <span class="o">||</span> <span class="n">result</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">total</span> <span class="o">&gt;=</span> <span class="n">WITHIN</span><span class="o">;</span>
-</span><span class='line'>              <span class="o">}</span>
-</span><span class='line'>          <span class="o">}</span> <span class="k">while</span> <span class="o">(!</span><span class="n">stop</span> <span class="o">&amp;&amp;</span> <span class="o">(</span><span class="n">read</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="o">));</span>
-</span><span class='line'>          <span class="n">reader</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
-</span><span class='line'>
-</span><span class='line'>          <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      <span class="k">catch</span> <span class="o">(</span><span class="n">Throwable</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">Logger</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">.</span><span class="na">trace</span><span class="o">(</span><span class="s">&quot;Failed: {0}&quot;</span><span class="o">,</span><span class="n">e</span><span class="o">,</span> <span class="n">e</span><span class="o">.</span><span class="na">getMessage</span><span class="o">()</span> <span class="o">);</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      <span class="k">finally</span> <span class="o">{</span>
-</span><span class='line'>      <span class="c1">//Omitted clean up code</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span> <span class="c1">//Something went wrong</span>
-</span><span class='line'>  <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This method accepts an <em>InputStream</em> and progressively reads it, 256 characters at a time, to find the transaction type. It is limited to search only the first 512 characters as an optimisation based on the known message structure. It will likely always find the transaction type within the first 256 characters, but 512 makes it a certainty. Also note the variables <em>WITHIN</em> and <em>BUFFER_SIZE</em>, which are there to make the code configurable and future proof.</p>
-
-<p>The code listed above can be included in a custom Java agent that will instrument the Weblogic code using a <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/instrument/package-summary.html">ClassFileTransformer</a>. Creating Java agents and class transformers are out of the scope of this article. It focuses on the bits actually injected. For more on creating a custom Java agent see the <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/instrument/package-summary.html">java.lang.instrument</a> documentation.</p>
-
-<p>The next step is making the above <em>getTransactionType</em> accessible by the AppDynamics agent.</p>
-
-<h3>Using custom byte code injection to expose internals to AppDynamics</h3>
-
-<p>Byte code injection can be achieved in different ways, one way is using the <a href="http://asm.ow2.org/">ASM library</a>. The basic idea is to inject a method into the <em>MessageContextImpl</em> class that can be accessed by AppDynamics as a getter on the first parameter of the <em>processMessage</em> method of <em>AssignRuntimeStep</em>.</p>
-
-<p>So for the agent to inject the following piece of code into the <em>MessageContextImpl</em> class,</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'> <span class="kd">public</span> <span class="n">String</span> <span class="nf">ec_getTransType</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">Logger</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">.</span><span class="na">debug</span><span class="o">(</span><span class="s">&quot;getTransactionType called&quot;</span><span class="o">);</span>
-</span><span class='line'>          <span class="k">return</span> <span class="n">TransactionTypeExtractor</span><span class="o">.</span><span class="na">getTransactionType</span><span class="o">(</span><span class="n">getBody</span><span class="o">().</span><span class="na">getInputStream</span><span class="o">(</span><span class="kc">null</span><span class="o">));</span>
-</span><span class='line'>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>          <span class="n">Logger</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">.</span><span class="na">error</span><span class="o">(</span><span class="s">&quot;Failed to get transactionType&quot;</span><span class="o">,</span> <span class="n">e</span><span class="o">);</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      <span class="k">return</span> <span class="kc">null</span><span class="o">;</span> <span class="c1">// Something went wrong</span>
-</span><span class='line'>  <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>you can use ASM as listed below. It effectively writes the above method into the <em>MessageContextImpl</em> class before it is loaded by the class loader. For more information on how to use ASM see the <a href="http://download.forge.objectweb.org/asm/asm4-guide.pdf">ASM User Guide</a>.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>     <span class="n">MethodVisitor</span> <span class="n">mv</span> <span class="o">=</span> <span class="kd">super</span><span class="o">.</span><span class="na">visitMethod</span><span class="o">(</span><span class="n">ACC_PUBLIC</span><span class="o">,</span> <span class="s">&quot;ec_getTransType&quot;</span><span class="o">,</span> <span class="s">&quot;()Ljava/lang/String;&quot;</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="kc">null</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitCode</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">Label</span> <span class="n">l0</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Label</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">Label</span> <span class="n">l1</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Label</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">Label</span> <span class="n">l2</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Label</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitTryCatchBlock</span><span class="o">(</span><span class="n">l0</span><span class="o">,</span> <span class="n">l1</span><span class="o">,</span> <span class="n">l2</span><span class="o">,</span> <span class="s">&quot;java/lang/Exception&quot;</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l0</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitFieldInsn</span><span class="o">(</span><span class="n">GETSTATIC</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/logging/Logger&quot;</span><span class="o">,</span> <span class="s">&quot;INSTANCE&quot;</span><span class="o">,</span> <span class="s">&quot;Lau/com/ecetera/javaagent/logging/Logger;&quot;</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLdcInsn</span><span class="o">(</span><span class="s">&quot;getTransactionType called&quot;</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ICONST_0</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitTypeInsn</span><span class="o">(</span><span class="n">ANEWARRAY</span><span class="o">,</span> <span class="s">&quot;java/lang/Object&quot;</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKEVIRTUAL</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/logging/Logger&quot;</span><span class="o">,</span> <span class="s">&quot;debug&quot;</span><span class="o">,</span> <span class="s">&quot;(Ljava/lang/String;[Ljava/lang/Object;)V&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">Label</span> <span class="n">l3</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Label</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l3</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitVarInsn</span><span class="o">(</span><span class="n">ALOAD</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKEVIRTUAL</span><span class="o">,</span> <span class="s">&quot;com/bea/wli/sb/context/MessageContextImpl&quot;</span><span class="o">,</span> <span class="s">&quot;getBody&quot;</span><span class="o">,</span> <span class="s">&quot;()Lcom/bea/wli/sb/sources/Source;&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ACONST_NULL</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKEINTERFACE</span><span class="o">,</span> <span class="s">&quot;com/bea/wli/sb/sources/Source&quot;</span><span class="o">,</span> <span class="s">&quot;getInputStream&quot;</span><span class="o">,</span> <span class="s">&quot;(Lcom/bea/wli/sb/sources/TransformOptions;)Ljava/io/InputStream;&quot;</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKESTATIC</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/vha/TransactionTypeExtractor&quot;</span><span class="o">,</span> <span class="s">&quot;getTransactionType&quot;</span><span class="o">,</span> <span class="s">&quot;(Ljava/io/InputStream;)Ljava/lang/String;&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l1</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ARETURN</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l2</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitFrame</span><span class="o">(</span><span class="n">Opcodes</span><span class="o">.</span><span class="na">F_SAME1</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="k">new</span> <span class="n">Object</span><span class="o">[]</span> <span class="o">{</span><span class="s">&quot;java/lang/Exception&quot;</span><span class="o">});</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitVarInsn</span><span class="o">(</span><span class="n">ASTORE</span><span class="o">,</span> <span class="mi">1</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">Label</span> <span class="n">l4</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Label</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l4</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitFieldInsn</span><span class="o">(</span><span class="n">GETSTATIC</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/logging/Logger&quot;</span><span class="o">,</span> <span class="s">&quot;INSTANCE&quot;</span><span class="o">,</span> <span class="s">&quot;Lau/com/ecetera/javaagent/logging/Logger;&quot;</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLdcInsn</span><span class="o">(</span><span class="s">&quot;Failed to get transactionType&quot;</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitVarInsn</span><span class="o">(</span><span class="n">ALOAD</span><span class="o">,</span> <span class="mi">1</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ICONST_0</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitTypeInsn</span><span class="o">(</span><span class="n">ANEWARRAY</span><span class="o">,</span> <span class="s">&quot;java/lang/Object&quot;</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitMethodInsn</span><span class="o">(</span><span class="n">INVOKEVIRTUAL</span><span class="o">,</span> <span class="s">&quot;au/com/ecetera/javaagent/logging/Logger&quot;</span><span class="o">,</span> <span class="s">&quot;error&quot;</span><span class="o">,</span> <span class="s">&quot;(Ljava/lang/String;Ljava/lang/Throwable;[Ljava/lang/Object;)V&quot;</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">Label</span> <span class="n">l5</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Label</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l5</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ACONST_NULL</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitInsn</span><span class="o">(</span><span class="n">ARETURN</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">Label</span> <span class="n">l6</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">Label</span><span class="o">();</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLabel</span><span class="o">(</span><span class="n">l6</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLocalVariable</span><span class="o">(</span><span class="s">&quot;this&quot;</span><span class="o">,</span> <span class="s">&quot;Lcom/bea/wli/sb/context/MessageContextImpl;&quot;</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="n">l0</span><span class="o">,</span> <span class="n">l6</span><span class="o">,</span> <span class="mi">0</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitLocalVariable</span><span class="o">(</span><span class="s">&quot;e&quot;</span><span class="o">,</span> <span class="s">&quot;Ljava/lang/Exception;&quot;</span><span class="o">,</span> <span class="kc">null</span><span class="o">,</span> <span class="n">l4</span><span class="o">,</span> <span class="n">l5</span><span class="o">,</span> <span class="mi">1</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitMaxs</span><span class="o">(</span><span class="mi">4</span><span class="o">,</span> <span class="mi">2</span><span class="o">);</span>
-</span><span class='line'>      <span class="n">mv</span><span class="o">.</span><span class="na">visitEnd</span><span class="o">();</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Change AppDynamics configuration</h3>
-
-<p>Now the AppDynamics agent configuration can be updated to use the new <em>ec_getTransType</em> method.</p>
-
-<p><img class="center" src="/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_2.png" title="&#34;Using new method to split&#34;" alt="&#34;Using new method to split&#34;"></p>
-
-<p>The resulting business transaction names now looks much better.</p>
-
-<p><img class="center" src="/images/split_bt_on_OSB_AppD/discovered_business_transactions_2.png" title="&#34;Properly named transactions&#34;" alt="&#34;Properly named transactions&#34;"></p>
-
-<h3>Conclusion</h3>
-
-<p>With AppDynamics it is possible to get really useful information out of a running application. It has very flexible configuration, which allows you to really dive deep into the application internals to find issues and separate transactions. However, sometimes it is better to give AppDynamics a hook into the internal information so that it can work more efficiently. When you have access to the application code then this can easily be achieved by adding some code. When it is not practical to rebuild the entire application then you can always use byte code injection.</p>
-
-<p><a href="#references"></a></p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
+    
+      <a class="prev" href="/posts/2">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     
@@ -1803,6 +544,10 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
 <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2017/08/24/callbacks-to-observables-in-typescript/">Callbacks to Observables in TypeScript</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad/">Ubuntu and the Dell XPS 9560 Touchpad</a>
@@ -1822,6 +567,10 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
     
       <li class="post">
         <a href="/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/">Extending Metrics for Complex Dashboards in AppDynamics</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/06/22/split-business-transactions-on-oracle-osb-using-appdynamics/">Split Business Transactions on Oracle Service Bus Using AppDynamics</a>
       </li>
     
   </ul>

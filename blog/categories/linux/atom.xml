@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Linux, | Ideas, Solutions, Work in progress]]></title>
+  <link href="http://pappanyn.me/blog/categories/linux/atom.xml" rel="self"/>
+  <link href="http://pappanyn.me/"/>
+  <updated>2017-09-05T08:13:35+00:00</updated>
+  <id>http://pappanyn.me/</id>
+  <author>
+    <name><![CDATA[Dirk van Rensburg]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Ubuntu and the Dell XPS 9560 Touchpad]]></title>
+    <link href="http://pappanyn.me/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad/"/>
+    <updated>2017-05-03T23:19:47+00:00</updated>
+    <id>http://pappanyn.me/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad</id>
+    <content type="html"><![CDATA[<p>I recently purchased a <a href="http://www.dell.com/au/p/xps-15-9560-laptop/pd?ref=PD_OC">Dell XPS 15 9560</a> which I use for my day to day work, with Ubuntu 16.04 as the only operating system. It is a wonderful laptop and Ubuntu runs on it with virtually no issues. There is one issue which bothered me more than others. The touch pad sensitivity and palm detection. Whenever I tried to type a long piece of text I would invariably find my self type a couple of words somewhere else on the screen.</p>
+
+<p>The problem was that when I reached for letters in the middle of the keyboard such as <code>T</code> or <code>Y</code> the inside bit of my palm would touch the touchpad in the top corner. The touchpad percieved that as a tap and I&rsquo;d continue typing wherever the mouse pointer was at the time.</p>
+
+<p>I usually have a mouse plugged in and have set the touchpad to be disabled when a mouse is plugged in. I used <a href="https://askubuntu.com/questions/787433/how-do-i-disable-touchpad-when-using-a-mouse">these instructions</a> from askubuntu to do that. It helped but I do quite a bit of work away from a desk and then I need the touchpad enabled.</p>
+
+<p>After a bit of googling a found a couple of questions on answers on numerous forums and managed to piece things together from there. <em>See the references at the bottom of the post.</em></p>
+
+<p>To make it work you first you have work out what your touchpad is called internally. You do this by running:</p>
+
+<pre><code>    xinput --list
+</code></pre>
+
+<p>which prints something like this:</p>
+
+<p><img class="center" src="/images/ubuntu_dell_touchpad/x-input-list.png" width="400" title="&lsquo;x-input &ndash;list&rsquo;" ></p>
+
+<p>From this output you can see there are a number of touch input devices:</p>
+
+<ul>
+<li>Virtual core XTEST pointer - <strong>Not entirely sure what this is</strong></li>
+<li>ELAN Touchscreen</li>
+<li>DLL07BE:01 06CB:7A13 Touchpad</li>
+</ul>
+
+
+<p>Look for the one called &lsquo;Touchpad&rsquo;. You can now list all the configuration for this device by using <code>xinput list-props</code>. For the XPS it is:</p>
+
+<pre><code>    xinput list-props  "DLL07BE:01 06CB:7A13 Touchpad"
+</code></pre>
+
+<p>This yields a long list of properties and their values. Look for the following:</p>
+
+<ul>
+<li>Synaptics Palm Detection</li>
+<li>Synaptics Palm Dimensions</li>
+<li>Synaptics Area</li>
+</ul>
+
+
+<p>In my case these where set as follows:</p>
+
+<table>
+<thead>
+<tr>
+<th> Property                  </th>
+<th> Value       </th>
+<th> Description                                 </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td> Synaptics Palm Detection  </td>
+<td> 0           </td>
+<td> This means palm detection is off            </td>
+</tr>
+<tr>
+<td> Synaptics Palm Dimensions </td>
+<td> 10, 200     </td>
+<td> The first value refer to the minimum        </td>
+</tr>
+<tr>
+<td> Synaptics Area            </td>
+<td> 0, 0, 0, 0  </td>
+<td> This describe the touchpad surface area where touches are detected.</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/>
+Most of the references I found was talking about changing the first two properties <code>Synaptics Palm Detection</code> and <code>Synaptics Palm Dimensions</code> however, changing those
+didn&rsquo;t make a difference for me. The cursor still jump around because my palm looks like a finger at the edge of the touchpad no matter how small I make the palm detection setting. This is understandable since only a small part of my palm actually touches the touchpad surface while typing.</p>
+
+<p>The setting which made the biggest difference for me was the last one <code>Synaptics Area</code>. It is used to manage the detection of touches at the edges of the touchpad.
+By changing the four values associated with Synaptics Area you can change the area of the touchpad that is active to touches.</p>
+
+<blockquote><p><small> Note that the <code>Synaptics Area</code> is about inital touches. The disabled areas still work if a touch is initated in the active area</small></p></blockquote>
+
+<p>The first value defines how far from the left of the touchpad edge touches are detected. Anything to the left of this value is not considered a touch. The second value
+sets how far to the right the active part of the touchpad stretches. The third sets how far from the top edge the active area starts and the fourth is how far down the
+active part stretches.</p>
+
+<p>To configure these you first have to work out how large the touchpad is by running the following command:</p>
+
+<pre><code>    less /var/log/Xorg.0.log | grep -i range
+</code></pre>
+
+<pre><code>    [     6.904] (--) synaptics: DLL07BE:01 06CB:7A13 Touchpad: x-axis range 0 - 1228 (res 12)
+    [     6.904] (--) synaptics: DLL07BE:01 06CB:7A13 Touchpad: y-axis range 0 - 928 (res 12)
+    [     6.904] (--) synaptics: DLL07BE:01 06CB:7A13 Touchpad: invalid pressure range.  defaulting to 0 - 255
+    [     6.904] (--) synaptics: DLL07BE:01 06CB:7A13 Touchpad: invalid finger width range.  defaulting to 0 - 15
+    [     7.028] (--) synaptics: SynPS/2 Synaptics TouchPad: x-axis range 1278 - 5664 (res 0)
+    [     7.028] (--) synaptics: SynPS/2 Synaptics TouchPad: y-axis range 1206 - 4646 (res 0)
+    [     7.028] (--) synaptics: SynPS/2 Synaptics TouchPad: pressure range 0 - 255
+    [     7.028] (--) synaptics: SynPS/2 Synaptics TouchPad: finger width range 0 - 15
+</code></pre>
+
+<p>From this you can see that the touchpad as a horizontal range of <code>0-1228</code> and a vertical range of <code>0-928</code>. I don&rsquo;t know what these numbers mean or measure, but I
+played around with different values a bit and found that, for me, the magic number is <code>70</code>.</p>
+
+<pre><code>xinput set-prop "DLL07BE:01 06CB:7A13 Touchpad" "Synaptics Area" 70 1168 70 0
+</code></pre>
+
+<ul>
+<li>Start detecting touches <code>70</code> from the left</li>
+<li>Stop detecting touches <code>1228-70 = 1168</code> from the left</li>
+<li>Start detecing touches <code>70</code> from the top</li>
+<li>Detect touches all the way down</li>
+</ul>
+
+
+<p>This setup work perfectly for me without even changing the <code>Synaptics Palm Dimensions</code>. I can now type without worrying about my cursor jumping all over the place. The best part is that if you initiate a drag of the pointer in the active area of the touchpad, the touchpad will track your finger all the way to the edge, even in the &lsquo;no touch&rsquo; zone.</p>
+
+<p>To make the changes permanent put them in a script and run the file at log in time using the <a href="https://www.howtogeek.com/189995/how-to-manage-startup-applications-in-ubuntu-14.04/">startup applications</a> gui.</p>
+
+<p><strong>References:</strong></p>
+
+<ul>
+<li><a href="https://stevenkohlmeyer.com/fixing-palm-detect-ubuntu-14-04/">Fixing palm detect on Ubuntu 14.04</a></li>
+<li><a href="https://stevenkohlmeyer.com/fixing-palm-detect-ubuntu-14-04/">Fixing palm detect on Ubuntu 14.04</a></li>
+<li><a href="https://askubuntu.com/questions/221664/how-to-tune-touchpad-for-smaller-area">Tune touchpad for smaller area</a></li>
+<li><a href="ftp://www.x.org/pub/X11R7.5/doc/man/man4/synaptics.4.html">Synaptics Area</a></li>
+</ul>
+
+]]></content>
+  </entry>
+  
+</feed>

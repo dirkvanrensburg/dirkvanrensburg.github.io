@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Ideas, Solutions, Work in progress]]></title>
-  <link href="http://dirk.kirko.io/atom.xml" rel="self"/>
-  <link href="http://dirk.kirko.io/"/>
-  <updated>2017-05-05T12:19:29+00:00</updated>
-  <id>http://dirk.kirko.io/</id>
+  <link href="http://pappanyn.me/atom.xml" rel="self"/>
+  <link href="http://pappanyn.me/"/>
+  <updated>2017-09-05T08:13:35+00:00</updated>
+  <id>http://pappanyn.me/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
     
@@ -14,10 +14,264 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Callbacks to Observables in TypeScript]]></title>
+    <link href="http://pappanyn.me/blog/2017/08/24/callbacks-to-observables-in-typescript/"/>
+    <updated>2017-08-24T22:24:08+00:00</updated>
+    <id>http://pappanyn.me/blog/2017/08/24/callbacks-to-observables-in-typescript</id>
+    <content type="html"><![CDATA[<blockquote><h4>TLDR;</h4>
+
+<p>Functional programming techniques makes it possible to reduce the amount of boiler plate code required when working with JavaScript libraries that require traditional callback functions. This blog will show how to drastically reduce the code and how to turn the callback handlers into observables.</p></blockquote>
+
+<h3>Back story</h3>
+
+<p>I was working on hooking the <a href="https://github.com/aws/amazon-cognito-identity-js">AWS Cognito JS SDK</a> into my Angular 4 project. I was using <a href="https://github.com/systemjs/systemjs">SytemJS</a> and <a href="https://rollupjs.org/">RollupJS</a> and after struggling for some time to get the bundling to work properly, I gave up and decided to just use the plain JavaScript API.</p>
+
+<p>This meant that not only was I missing the nice TypeScript typings for the SDK, but also faced with the clunky callback patterns used in some JavaScript API&rsquo;s.</p>
+
+<h3>JavaScript Callbacks</h3>
+
+<p>There are various common JavaScript patterns for handling async methods via callbacks. These callback mechanisms allow callers to provide a hook so that they can be called back in the future with the result or error.</p>
+
+<p>One common approach is that the method requires a single callback function in addition to its normal parameters. The called function will then invoke the callback function with an error as the first parameter, or a result as the second parameter. It is up to the callback function to determine whether it received an error or not.</p>
+
+<p>The following contrived example shows how the <code>sendMsg</code> function will invoke the callback and pass an error message or success result.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="kd">function</span> <span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="nx">message</span> <span class="o">===</span> <span class="s1">&#39;dontsend&#39;</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">callback</span><span class="p">(</span><span class="s1">&#39;whoops not sending!&#39;</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">callback</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="s1">&#39;Success!&#39;</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">error</span><span class="p">,</span> <span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s2">&quot;An error occurred&quot;</span> <span class="o">+</span> <span class="nx">error</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Message was sent successfully.&quot;</span> <span class="o">+</span> <span class="nx">result</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">})</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As mentioned before there are other common ways to do callbacks such as requiring separate success and error handling functions, or using objects with <code>onSuccess</code> and <code>onFailure</code> methods. However, the solution is similar regardless of the callback pattern followed so the rest of this article will use the single callback function approach above as the example.</p>
+
+<h3>TypeScript, Observables and callbacks</h3>
+
+<p>Calling such a JavaScript function from TypeScript looks something like this:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">public</span> <span class="nx">sendMessage</span><span class="p">(</span><span class="nx">message</span>: <span class="kt">string</span><span class="p">,</span> <span class="nx">cb</span><span class="o">:</span> <span class="p">(</span><span class="nx">err</span>:<span class="kt">any</span><span class="p">,</span> <span class="nx">res</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="k">void</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nx">sendJS</span><span class="p">.</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="nx">cb</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is all fine and works ok but I don&rsquo;t want the clients of my code to have to pass a callback handler. What I really want is to return an <a href="http://reactivex.io/documentation/observable.html">Observable</a> to my clients. I can achieve this as follows:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">public</span> <span class="nx">sendMessage</span><span class="p">(</span><span class="nx">message</span>: <span class="kt">string</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">let</span> <span class="nx">sendResult</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">sendJS</span><span class="p">.</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span>
+</span><span class='line'>            <span class="p">(</span><span class="nx">err</span>:<span class="kt">any</span><span class="p">,</span> <span class="nx">res</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>                <span class="k">if</span> <span class="p">(</span><span class="o">!!</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                    <span class="nx">sendResult</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">err</span><span class="p">);</span>
+</span><span class='line'>                <span class="p">}</span>
+</span><span class='line'>                <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>                    <span class="nx">sendResult</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="s2">&quot;Message was sent successfully.&quot;</span> <span class="o">+</span> <span class="nx">res</span><span class="p">);</span>
+</span><span class='line'>                <span class="p">}</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>    <span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">sendResult</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>However the bit on <code>line 6</code> where we check for the error is a bit tedious. I will have to duplicate this all over the place and I don&rsquo;t necessarily know what to do with the error. In most cases I will just send it along for the client to deal with.</p>
+
+<p>To get rid of the error handling duplication I write a function to take the subject, success and <em>optional</em> error handler functions and return a callback function</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">interface</span> <span class="nx">CallbackFunction</span> <span class="p">{</span>
+</span><span class='line'>    <span class="p">(</span><span class="nx">error</span>: <span class="kt">any</span><span class="p">,</span> <span class="nx">result</span>: <span class="kt">any</span><span class="p">)</span><span class="o">:</span> <span class="k">void</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'> <span class="kd">function</span> <span class="nx">subToHandler</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">subject</span>: <span class="kt">Subject</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">,</span> <span class="nx">successFn</span><span class="o">:</span> <span class="p">(</span><span class="nx">m</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">T</span><span class="p">,</span> <span class="nx">errorFn</span><span class="o">?:</span> <span class="p">(</span><span class="nx">a</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">any</span><span class="p">)</span><span class="o">:</span> <span class="nx">CallbackFunction</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="p">(</span><span class="nx">error</span>:<span class="kt">any</span><span class="p">,</span> <span class="nx">result</span>:<span class="kt">any</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="o">!!</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">if</span> <span class="p">(</span><span class="o">!!</span><span class="nx">errorFn</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">subject</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">errorFn</span><span class="p">(</span><span class="nx">error</span><span class="p">));</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>            <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>                <span class="nx">subject</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">error</span><span class="p">);</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>        <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>            <span class="nx">subject</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">successFn</span><span class="p">(</span><span class="nx">result</span><span class="p">));</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">};</span>
+</span><span class='line'> <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The interface <code>CallbackFunction</code> cleans the method signature up a bit and makes things a bit easier to read.</p>
+
+<p>The returned callback function checks the error and, if an error handler was provided, applies it before calling <code>error</code> on the subject <code>(line 5)</code>. If no error is provided to the callback function then it will call <code>next</code> on the subject to pass the valid result on to the observers.</p>
+
+<p>This means that I can now rewrite the send message code as follows:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">public</span> <span class="nx">sendMessage</span><span class="p">(</span><span class="nx">message</span>: <span class="kt">string</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">let</span> <span class="nx">sendResult</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">sendJS</span><span class="p">.</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span>
+</span><span class='line'>        <span class="nx">subToHandler</span><span class="p">(</span><span class="nx">sendResult</span><span class="p">,</span>
+</span><span class='line'>            <span class="nx">res</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>                <span class="k">return</span> <span class="s2">&quot;Message was sent successfully.&quot;</span> <span class="o">+</span> <span class="nx">res</span>
+</span><span class='line'>            <span class="p">}</span>
+</span><span class='line'>        <span class="p">)</span>
+</span><span class='line'>    <span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">sendResult</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is much better since I don&rsquo;t have to call <code>next</code> and <code>error</code> on the subject and I don&rsquo;t have to check for the error anymore. There is also much less code because I no longer have to explicitly handle the error. It can be fully delegated to the observers of the subject.</p>
+
+<p>However, this still not perfect. I will be duplicating the <code>Subject</code> and <code>Observable</code> creation lines everywhere. It also looks a bit weird to be creating a Subject and passing it on to another function.</p>
+
+<p>I can get rid of the statements on <code>lines 3 and 12</code> above by writing another function which will return the Observable, relieving me from creating the subject explicitly.</p>
+
+<p>Consider the following snippet:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kd">function</span> <span class="nx">exec</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">fn</span><span class="o">:</span> <span class="p">(</span><span class="nx">cb</span>:<span class="kt">CallbackFunction</span><span class="p">)</span><span class="o">=&gt;</span><span class="k">void</span><span class="p">,</span> <span class="nx">successFn</span><span class="o">:</span> <span class="p">(</span><span class="nx">a</span>:<span class="kt">any</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">T</span><span class="p">,</span> <span class="nx">errorFn</span><span class="o">?:</span> <span class="p">(</span><span class="nx">e</span>:<span class="kt">any</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">any</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="p">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="kd">let</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">();</span>
+</span><span class='line'>    <span class="nx">fn</span><span class="p">(</span><span class="nx">subToHandler</span><span class="p">(</span><span class="nx">result</span><span class="p">,</span> <span class="nx">successFn</span><span class="p">,</span> <span class="nx">errorFn</span><span class="p">));</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">result</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here I add another function <code>exec</code> which will create a subject, turn the subject into a handler using <code>subToHandler</code> defined earlier, apply the function provided as first parameter and then return an observable.</p>
+
+<p>You&rsquo;ll notice that the first parameter <code>fn</code> is a function which takes a <code>CallbackFunction</code> as its sole parameter. The JavaScript library functions require parameters in addition to the callback funtion, so I cannot pass the JavaScript function in to  <code>exec</code>.</p>
+
+<p>Consider the following rewrite of the <code>sendMessage</code> function:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">public</span> <span class="nx">sendMessage</span><span class="p">(</span><span class="nx">message</span>: <span class="kt">string</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="nx">exec</span><span class="p">(</span>
+</span><span class='line'>        <span class="p">(</span><span class="nx">cb</span>: <span class="kt">CallbackFunction</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>            <span class="nx">sendJS</span><span class="p">.</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="nx">cb</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">},</span>
+</span><span class='line'>        <span class="nx">res</span> <span class="o">=&gt;</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="s2">&quot;Message was sent successfully.&quot;</span> <span class="o">+</span> <span class="nx">res</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here I effectively partially applied the original <code>sendJS.sendMsg</code> function by closing over the value of the first argument, <code>message</code>, and returning a new function which takes <em>only</em> a callback function as parameter. This allows the <code>exec</code> function to create the appropriate callback function, using <code>subToHandler</code> and pass it to the partially applied <code>sendMsg</code>.</p>
+
+<h3>In closing</h3>
+
+<p>By using some basic functional programming techniques I could reduce the amount of boiler plate code required when working with JavaScript libraries with traditional callback functions. I managed to reduce the code drastically and turned the callback handler into an Observable which clients of my service can subscribe to.</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Ubuntu and the Dell XPS 9560 Touchpad]]></title>
-    <link href="http://dirk.kirko.io/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad/"/>
+    <link href="http://pappanyn.me/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad/"/>
     <updated>2017-05-03T23:19:47+00:00</updated>
-    <id>http://dirk.kirko.io/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad</id>
+    <id>http://pappanyn.me/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad</id>
     <content type="html"><![CDATA[<p>I recently purchased a <a href="http://www.dell.com/au/p/xps-15-9560-laptop/pd?ref=PD_OC">Dell XPS 15 9560</a> which I use for my day to day work, with Ubuntu 16.04 as the only operating system. It is a wonderful laptop and Ubuntu runs on it with virtually no issues. There is one issue which bothered me more than others. The touch pad sensitivity and palm detection. Whenever I tried to type a long piece of text I would invariably find my self type a couple of words somewhere else on the screen.</p>
 
 <p>The problem was that when I reached for letters in the middle of the keyboard such as <code>T</code> or <code>Y</code> the inside bit of my palm would touch the touchpad in the top corner. The touchpad percieved that as a tap and I&rsquo;d continue typing wherever the mouse pointer was at the time.</p>
@@ -34,7 +288,7 @@
 
 <p>which prints something like this:</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ubuntu_dell_touchpad/x-input-list.png" width="400" title="'x-input --list'" ></p>
+<p><img class="center" src="http://pappanyn.me/images/ubuntu_dell_touchpad/x-input-list.png" width="400" title="'x-input --list'" ></p>
 
 <p>From this output you can see there are a number of touch input devices:</p>
 
@@ -162,9 +416,9 @@ played around with different values a bit and found that, for me, the magic numb
   
   <entry>
     <title type="html"><![CDATA[Octopress in a Docker Container]]></title>
-    <link href="http://dirk.kirko.io/blog/2017/04/12/octopress-in-a-docker-container/"/>
+    <link href="http://pappanyn.me/blog/2017/04/12/octopress-in-a-docker-container/"/>
     <updated>2017-04-12T22:46:14+00:00</updated>
-    <id>http://dirk.kirko.io/blog/2017/04/12/octopress-in-a-docker-container</id>
+    <id>http://pappanyn.me/blog/2017/04/12/octopress-in-a-docker-container</id>
     <content type="html"><![CDATA[<p>I use <a href="http://octopress.org/">Octopress</a> for my, albeit infrequent, blogging. I like the idea of statically generating the blog site with the posts and keeping it all in Git. I also enjoy the ability to quickly type up a post using <a href="https://www.google.com.au/webhp?sourceid=chrome-instant&amp;ion=1&amp;espv=2&amp;ie=UTF-8#q=markdown">markdown</a> and then publish it. No need to log in to a site to write the post.</p>
 
 <p>My biggest problem with Octopress is that it requires me to install and manage a <a href="https://www.ruby-lang.org/en/">Ruby</a> environment. Either by outright installing Ruby on my machine or through <a href="https://github.com/rbenv/rbenv">rbenv</a>. This usually means, for me at least, a struggle to get all the gems successfully installed. Adding plugins often result in errors while installing gems either due to dependencies between gem versions, or some system level dependency that is not available.</p>
@@ -534,9 +788,9 @@ The container will start up and your terminal should be attached and in the <cod
   
   <entry>
     <title type="html"><![CDATA[Hazelcast, JCache and Spring Boot]]></title>
-    <link href="http://dirk.kirko.io/blog/2017/02/16/a-run-around-with-hazelcast/"/>
+    <link href="http://pappanyn.me/blog/2017/02/16/a-run-around-with-hazelcast/"/>
     <updated>2017-02-16T21:09:39+00:00</updated>
-    <id>http://dirk.kirko.io/blog/2017/02/16/a-run-around-with-hazelcast</id>
+    <id>http://pappanyn.me/blog/2017/02/16/a-run-around-with-hazelcast</id>
     <content type="html"><![CDATA[<p><a href="https://hazelcast.com/">Hazelcast</a> is an in memory data grid which enables data sharing between nodes in a server cluster along with a full set of other data grid features. It also
 implements the <a href="https://jcp.org/aboutJava/communityprocess/final/jsr107/index.html">JCache (JSR107)</a> caching standard so it is ideal for building a data aggregation service.</p>
 
@@ -913,9 +1167,9 @@ it yourself. The people over at Spring are working hard to make everything &lsqu
   
   <entry>
     <title type="html"><![CDATA[Java Double and NaN Weirdness]]></title>
-    <link href="http://dirk.kirko.io/blog/2017/01/11/java-double-and-nan/"/>
+    <link href="http://pappanyn.me/blog/2017/01/11/java-double-and-nan/"/>
     <updated>2017-01-11T01:08:52+00:00</updated>
-    <id>http://dirk.kirko.io/blog/2017/01/11/java-double-and-nan</id>
+    <id>http://pappanyn.me/blog/2017/01/11/java-double-and-nan</id>
     <content type="html"><![CDATA[<p>We learn something everyday. We don&rsquo;t always realise it, but we do. Sometimes the thing you learn isn&rsquo;t new at all, but something you sort of knew
 but never really thought about too much.</p>
 
@@ -1075,14 +1329,14 @@ System.out.println("POSTIVE_INFINITY - NaN" + (pos - Double.NaN));
   
   <entry>
     <title type="html"><![CDATA[Extending Metrics for Complex Dashboards in AppDynamics]]></title>
-    <link href="http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/"/>
+    <link href="http://pappanyn.me/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/"/>
     <updated>2014-11-28T15:16:35+00:00</updated>
-    <id>http://dirk.kirko.io/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics</id>
+    <id>http://pappanyn.me/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics</id>
     <content type="html"><![CDATA[<h3>Overview</h3>
 
 <p>Some time ago, I was tasked to replicate one of our client&rsquo;s <a href="http://www.ca.com/us/opscenter/ca-application-performance-management.aspx" title="CA Application Performance Management">Wily Introscope</a> dashboards in <a href="http://www.appdynamics.com" title="AppDynamics">AppDynamics</a>. The Wily dashboard displayed a number of status lights indicating how recently activity was detected from a particular client of the application.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/wily_dashboard.png" title="Example of the Wily Dashboard" ></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/wily_dashboard.png" title="Example of the Wily Dashboard" ></p>
 
 <p>The status light colours were assigned as follows:</p>
 
@@ -1147,32 +1401,32 @@ The data for each light was gathered by Introscope using custom instrumentation 
 <pre><code>Analyse -&gt; Information Points -&gt; New
 </code></pre>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/information_points.png" title="Information Points in AppDynamics" ></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/information_points.png" title="Information Points in AppDynamics" ></p>
 
 <p>Information points track calls to specific methods so you need to provide the <em>class name</em>, <em>method name</em> of the method to collect metrics for. In this case we want separate informations points based on the parameter to the method call, so we need to set a <em>match condition</em></p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/capture_information_point.png" title="Capture Information Point" ></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/capture_information_point.png" title="Capture Information Point" ></p>
 
 <p>The information point will then start collecting data for <em>Average Response Time</em>, <em>Calls per minute</em>, and <em>Errors per minute</em> as seen on the following dashboard view.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/infopoint_metrics.png" title="Information Point Metrics" ></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/infopoint_metrics.png" title="Information Point Metrics" ></p>
 
 <p>Once defined, the information points are also available in the metric browser where you can plot the different metrics of each information point on the same graph. The following image shows the <em>Average Response Time</em> for <strong>CLIENT2</strong> and <strong>CLIENT4</strong></p>
 
 <pre><code>Analyse -&gt; Metric Browser
 </code></pre>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/infopoints_metricbrowser.png"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/infopoints_metricbrowser.png"></p>
 
 <h3>Using the REST API</h3>
 
 <p>The AppDynamics controller provides a <a href="https://docs.appdynamics.com/display/PRO39/Use+the+AppDynamics+REST+API" title="AppDynamics REST API">REST API</a>, which enables you to programmatically extract information out of the controller and, in the case of configuration, send information to the controller. This means that we can call the controller to get the metric information of the information points we just configured. The URL to an information point metric can be retrieved from the metric browser. Right click on the information point and the metric you are interested in, <em>Calls per Minute</em> in our case, and select <em>Copy REST URL</em></p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/get_rest_url.png" title="&#34;Rest URL from metric browser&#34;" alt="&#34;Rest URL from metric browser&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/get_rest_url.png" title="&#34;Rest URL from metric browser&#34;" alt="&#34;Rest URL from metric browser&#34;"></p>
 
 <p>This will copy the URL to the clipboard and you can test it by pasting it into a new tab in your web browser. You should see something like this</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/rest_results_example.png" title="&#34;Example REST results&#34;" alt="&#34;Example REST results&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/rest_results_example.png" title="&#34;Example REST results&#34;" alt="&#34;Example REST results&#34;"></p>
 
 <p>The URL can be changed to get the information over different time ranges by changing the <em>time-range-type</em> and <em>duration-in-mins</em> fields. The <em>time-range-type</em> field is used to get information relative to a point in time, so for example it can be used to get information for the last 15 minutes or for the 30 minutes after 10 am this morning. We can use this to get the information we are after out of AppDynamics. We can get the number of times each client called the service in the last 10, 60 or 960 minutes by changing these fields and calling the controller.</p>
 
@@ -1217,7 +1471,7 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
 
 <p>There will be a section for each client (<strong>CLIENT1</strong> to <strong>CLIENTx</strong>) and each will have a metric for each of the time ranges we are interested in (10, 60 and 960 minutes)</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/new_metrics_in_browser.png" title="&#34;The new metrics displayed in the browser&#34;" alt="&#34;The new metrics displayed in the browser&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/new_metrics_in_browser.png" title="&#34;The new metrics displayed in the browser&#34;" alt="&#34;The new metrics displayed in the browser&#34;"></p>
 
 <h3>Health Rules</h3>
 
@@ -1231,39 +1485,39 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
 <p>First specify a name for the rule, the type of metric we will use and the time range to use when evaluating the health rule. The last 5 minutes is good enough since the machine agent will send a value every minute and the value it sends is already summed over the period in question.</p>
 
 <p>We need to create one health rule for every client
-<img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/health_rule_step1.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
+<img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/health_rule_step1.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
 
 <p>The WARNING condition is raised if there were no calls in the last 10 minutes, but some in the last 60 minutes.
-<img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/health_rule_warning.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
+<img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/health_rule_warning.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
 
 <p>The CRITICAL condition is raised if there were no calls in the last 60 minutes.
-<img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/health_rule_critical.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
+<img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/health_rule_critical.png" title="&#34;Create the health rule&#34;" alt="&#34;Create the health rule&#34;"></p>
 
 <h3>Putting it all together</h3>
 
 <p>Now we have all the information we need to start assembling the dashboard. Status lights only work on <em>Custom Dashboard</em> as opposed to <em>Node/Tier Dashboards</em>. To create a <em>Custom Dashboard</em> we click on the AppDynamics logo at the left top an choose <em>Custom Dashboards</em></p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/select_custom_dashboards.png" title="&#34;Create Custom Dashboard&#34;" alt="&#34;Create Custom Dashboard&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/select_custom_dashboards.png" title="&#34;Create Custom Dashboard&#34;" alt="&#34;Create Custom Dashboard&#34;"></p>
 
 <p>Next we create a new dashboard by clicking on the <em>Create Dashboad</em> and set the layout of the canvas to <strong>absolute</strong>. This is because the grid layout does not support metric labels on top of other widgets and we need this to complete the dashboard.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/create_absolute_dashboard.png" title="&#34;Create new Dashboard&#34;" alt="&#34;Create new Dashboard&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/create_absolute_dashboard.png" title="&#34;Create new Dashboard&#34;" alt="&#34;Create new Dashboard&#34;"></p>
 
 <p>Put a label with the text <em>Client Access</em> and place it at the top of the dashboard, add a label for the first status light with the text <em>CLIENT 1</em> and then add the status light for client 1. The status light is linked to the health rule for <em>CLIENT1</em> by selecting it in the status light properties.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/client_access_first_statuslight.png" title="&#34;Status light properties&#34;" alt="&#34;Status light properties&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/client_access_first_statuslight.png" title="&#34;Status light properties&#34;" alt="&#34;Status light properties&#34;"></p>
 
 <p>We can now repeat these steps for the remaining 5 clients, linking each to the appropriate health rule, and finally the dashboard looks like this</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/client_access_dashboard.gif" title="&#34;All the status lights&#34;" alt="&#34;All the status lights&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/client_access_dashboard.gif" title="&#34;All the status lights&#34;" alt="&#34;All the status lights&#34;"></p>
 
 <p>As mentioned at the start of the post, the Introscope status light can be in four states and the AppDynamics status light only three. To represent the fourth state we can put the value of the <em>Calls per 960 Minutes</em> metric on the status light as a dynamic label.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/metric_label_call_960.png" title="&#34;Metric label&#34;" alt="&#34;Metric label&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/metric_label_call_960.png" title="&#34;Metric label&#34;" alt="&#34;Metric label&#34;"></p>
 
 <p>The label background is set as transparent, and sized so that it will fit on the status light for client 1. After adding a metric label for each client, the dashboard is complete. We now have a fully functional dashboard which displays the same information as the original Introscope dashboard. In fact, it shows a little more information because we added the <em>&lsquo;calls today&rsquo;</em> label on the status to make up for the missing fourth state. Knowing the number of calls for the day is much better than just having a red light meaning <em>&lsquo;some calls today but nothing in the last hour&rsquo;</em>.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/ext_metrics_complex_dashboards_appd/client_access_dashboard_final.gif" title="&#34;Completed Dashboard&#34;" alt="&#34;Completed Dashboard&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/ext_metrics_complex_dashboards_appd/client_access_dashboard_final.gif" title="&#34;Completed Dashboard&#34;" alt="&#34;Completed Dashboard&#34;"></p>
 
 <h3>Conclusion</h3>
 
@@ -1273,9 +1527,9 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
   
   <entry>
     <title type="html"><![CDATA[Split Business Transactions on Oracle Service Bus Using AppDynamics]]></title>
-    <link href="http://dirk.kirko.io/blog/2014/06/22/split-business-transactions-on-oracle-osb-using-appdynamics/"/>
+    <link href="http://pappanyn.me/blog/2014/06/22/split-business-transactions-on-oracle-osb-using-appdynamics/"/>
     <updated>2014-06-22T14:00:00+00:00</updated>
-    <id>http://dirk.kirko.io/blog/2014/06/22/split-business-transactions-on-oracle-osb-using-appdynamics</id>
+    <id>http://pappanyn.me/blog/2014/06/22/split-business-transactions-on-oracle-osb-using-appdynamics</id>
     <content type="html"><![CDATA[<h3>Overview</h3>
 
 <p><a href="http://www.ecetera.com.au">We</a> recently helped a customer configure AppDynamics to monitor their business transactions on <a href="http://www.oracle.com/technetwork/middleware/service-bus/overview/index.html">Oracle OSB</a>. AppDynamics does not have built-in support for Oracle OSB, although it does support Weblogic Application Server. It detected various business transactions out of the box, but one type of transaction in particular proved to be a little tricky.</p>
@@ -1288,40 +1542,40 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
 
 <p>An example OSB application which reproduces the design of the actual application is used to illustrate the problem and solution.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/example_osb_proxy_service.png" title="Example Application" ></p>
+<p><img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/example_osb_proxy_service.png" title="Example Application" ></p>
 
 <h3>Finding the business transactions</h3>
 
 <p>It is a bit tricky to find the business transactions for this application because the services on Oracle OSB are all implemented by configuring the same Oracle classes. Each Proxy Service is just another instance of the same class and the call graph in the transaction snapshot is full of generic sounding names like <em>&lsquo;AssignRuntimeStep&rsquo;</em></p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/callgraph.png" title="Proxy Service call graph" ></p>
+<p><img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/callgraph.png" title="Proxy Service call graph" ></p>
 
 <p>The first step to figuring out how to separate the business transactions is using the AppDynamics <a href="http://docs.appdynamics.com/display/PRO14S/Configure+Data+Collectors">Method Invocation Data Collector</a> feature. This gives you a way to inspect the method parameters in the call and printing their values. Method invocation data collectors allows you to configure AppDynamics to capture the value of a parameter for a particular method invocation. Not only the value of the parameter but it is possible to apply a chain of get- methods to the parameter.</p>
 
 <p>The following figure shows data collector configuration to get information out of the parameters passed to the <em>processMessage</em> method on the <em>AssignRuntimeStep</em> class we noticed in the call graph. This data collector tells AppDynamics to capture the first parameter to the <em>processMessage</em> method on the class <em>AssignRuntimeStep</em> and then to collect the result of calling <em>toString()</em> and <em>getClass().getName()</em> on that parameter.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/method_invocation_data_collector.png" title="Method Invocation Data Collector" ></p>
+<p><img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/method_invocation_data_collector.png" title="Method Invocation Data Collector" ></p>
 
 <p>The results of this can be seen in the following images. The first shows the result of the <em>toString()</em> applied to the first parameter</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/user_data1.png"></p>
+<p><img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/user_data1.png"></p>
 
 <p>and the second shows the class of the parameter. Notice that the class name is repeated three times. It is a list of values, one value saved for every invocation of the <em>processMessage</em> method.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/user_data2.png"></p>
+<p><img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/user_data2.png"></p>
 
 <p>From the first image it is obvious that the input message is contained in the first parameter. You can also see that the messages is stored in a map like structure and the key is called <em>body</em>. Note that the business transaction name is visible in the first image <strong>TranactionName=&ldquo;Business Transaction1&rdquo;</strong>. The second image shows the type of the first parameter so the message is contained in an object of class <em>MessageContextImpl</em>.</p>
 
 <p>The next step is to tell AppDynamics what to use for splitting the business transactions and this can be done by using a <a href="http://docs.appdynamics.com/display/PRO14S/Match+Rule+Conditions">Business Transaction Match Rule</a>. The number of characters from the start of the message to the field we are interested in are roughly <strong>126</strong> and assuming the transaction names will be around 20 characters we can set up a match rule as follows:</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/new_bt_match_rule_1.png" title="New Business Transaction Match Rule" >
-<img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_1.png" title="New Business Transaction Match Rule - Split" ></p>
+<p><img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/new_bt_match_rule_1.png" title="New Business Transaction Match Rule" >
+<img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_1.png" title="New Business Transaction Match Rule - Split" ></p>
 
 <p>Note the number of arguments (2) set in the above image. That value is important and the transactions will not show up at all if the wrong value is used. We determined the value by decompiling the Weblogic class but you can always do it by first trying 1 and then 2.</p>
 
 <p>With the above configuration in place the AppDynamics agent is able to pick up the different transactions. The transaction names aren&rsquo;t perfect but it works!</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/discovered_business_transactions.png" title="Discovered business transactions" ></p>
+<p><img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/discovered_business_transactions.png" title="Discovered business transactions" ></p>
 
 <h3>Optimise and get the correct name</h3>
 
@@ -1581,11 +1835,11 @@ name=Custom Metrics|Information Points|CLIENT2|Calls per 960 Minutes,value=3519
 
 <p>Now the AppDynamics agent configuration can be updated to use the new <em>ec_getTransType</em> method.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_2.png" title="&#34;Using new method to split&#34;" alt="&#34;Using new method to split&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/new_bt_match_rule_split_2.png" title="&#34;Using new method to split&#34;" alt="&#34;Using new method to split&#34;"></p>
 
 <p>The resulting business transaction names now looks much better.</p>
 
-<p><img class="center" src="http://dirk.kirko.io/images/split_bt_on_OSB_AppD/discovered_business_transactions_2.png" title="&#34;Properly named transactions&#34;" alt="&#34;Properly named transactions&#34;"></p>
+<p><img class="center" src="http://pappanyn.me/images/split_bt_on_OSB_AppD/discovered_business_transactions_2.png" title="&#34;Properly named transactions&#34;" alt="&#34;Properly named transactions&#34;"></p>
 
 <h3>Conclusion</h3>
 

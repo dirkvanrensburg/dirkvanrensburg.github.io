@@ -1,0 +1,969 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Ideas, Solutions, Work in progress</title>
+  <meta name="author" content="Dirk van Rensburg">
+
+  
+  <meta name="description" content="I use Octopress for my, albeit infrequent, blogging. I like the idea of statically generating the blog site with the posts and keeping it all in Git &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://pappanyn.me/posts/2">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ideas, Solutions, Work in progress" type="application/atom+xml">
+  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-92268724-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-3879783679663791",
+    enable_page_level_ads: true
+  });
+</script>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ideas, Solutions, Work in progress</a></h1>
+  
+    <h2>and other things</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:pappanyn.me" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017/04/12/octopress-in-a-docker-container/">Octopress in a Docker Container</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-04-12T22:46:14+00:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>12</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>10:46 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I use <a href="http://octopress.org/">Octopress</a> for my, albeit infrequent, blogging. I like the idea of statically generating the blog site with the posts and keeping it all in Git. I also enjoy the ability to quickly type up a post using <a href="https://www.google.com.au/webhp?sourceid=chrome-instant&amp;ion=1&amp;espv=2&amp;ie=UTF-8#q=markdown">markdown</a> and then publish it. No need to log in to a site to write the post.</p>
+
+<p>My biggest problem with Octopress is that it requires me to install and manage a <a href="https://www.ruby-lang.org/en/">Ruby</a> environment. Either by outright installing Ruby on my machine or through <a href="https://github.com/rbenv/rbenv">rbenv</a>. This usually means, for me at least, a struggle to get all the gems successfully installed. Adding plugins often result in errors while installing gems either due to dependencies between gem versions, or some system level dependency that is not available.</p>
+
+<p>These system level dependencies really bugs me so when I recently replaced my laptop I decided to keep my OS Ruby free by managing the Octopress Ruby environment and the system level dependencies in a <a href="https://www.docker.com/">Docker</a> container rather than using <code>rbenv</code></p>
+
+<blockquote><p>TLDR; <small>The impatient can find the Dockerfile at: <a href="https://github.com/dirkvanrensburg/octopress2-dockerfile">https://github.com/dirkvanrensburg/octopress2-dockerfile</a></small></p></blockquote>
+
+<h3>Tested environment</h3>
+
+<table>
+<thead>
+<tr>
+<th>Thing     </th>
+<th> Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OS        </td>
+<td> Ubuntu 16.04</td>
+</tr>
+<tr>
+<td>Docker    </td>
+<td> 17.03.1-ce</td>
+</tr>
+<tr>
+<td>Octopress </td>
+<td> 2.0</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p>
+
+<h3>Assumptions</h3>
+
+<p><a href="github-pages">Github Pages</a> to publish and host my blog and this post assumes that you are too. However, this post should be useful even if you don&rsquo;t want to use Github Pages.</p>
+
+<h3>Octopress</h3>
+
+<p>Now that you have a working container, it is time to do the Octopress installation. You can either start with a fresh copy of Octopress, see the <a href="http://octopress.org/docs/">documentation</a> or with an existing Octopress blog. If you have an exising blog then you may have to tweak the Dockerfile a bit to add any system level dependencies your blog my have.</p>
+
+<h4>New Octopress blog</h4>
+
+<p>For a new blog you have a bit of a chicken and egg problem. You need to get the Octopress stuff, but you can&rsquo;t run any Ruby dependent commands because Ruby is in the Docker container.</p>
+
+<p>Clone Octopress and take note of the <code>Gemfile</code> in the root of the repository:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>git clone git://github.com/imathis/octopress.git octopress
+</span><span class='line'>cd octopress</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p><small> You&rsquo;ll need the <code>Gemfile</code> in the root of the blog repository for building the Docker image later on. </small></p></blockquote>
+
+<h4>Existing octopress blog</h4>
+
+<p>The following steps should get the blog repository in the correct state for generating and publishing.</p>
+
+<ul>
+<li>If you don&rsquo;t have a current copy of your blog then clone the repository from Github</li>
+<li>Once you have cloned the repository change into the repository directory and change the working branch from <code>master</code> to <code>source</code></li>
+<li>Create the <code>_deploy</code> folder and change into that directory</li>
+<li>Now link the <code>_deploy</code> directory with the master branch of your blog repository
+
+<ul>
+<li><code>git init</code></li>
+<li><code>git remote add origin &lt;githubrepourl&gt;</code></li>
+<li><code>git pull origin master</code></li>
+</ul>
+</li>
+</ul>
+
+
+<blockquote><p><small> You&rsquo;ll need the <code>Gemfile</code> in the root of the blog repository for building the Docker image later on. </small></p></blockquote>
+
+<h3>Docker</h3>
+
+<p>Docker gives you the ability to create a lightweight container for processes and their dependencies. You create a container from some published base image and then install the necessary packages as you would on a normal machine. You can then run the container, which will start the required process and run it without poluting the host operating system with unecessary dependencies.</p>
+
+<h4>Dockerfile</h4>
+
+<p>A <code>Dockerfile</code> is a file which tells the Docker daemon what you want in your container. How to write a <code>Dockerfile</code> and what you can do with it is extensively documented <a href="https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices">here</a>.</p>
+
+<p>You basically start with a <code>FROM</code> statement telling Docker where you want to start and then telling it
+which package to install. In this case you have a number of dependencies as seen here:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>FROM ubuntu:16.04
+</span><span class='line'>
+</span><span class='line'>RUN apt-get update -y && apt-get -y install \
+</span><span class='line'>  sudo \
+</span><span class='line'>  gcc make \
+</span><span class='line'>  git \
+</span><span class='line'>  vim less \
+</span><span class='line'>  curl \
+</span><span class='line'>  ruby ruby-dev \
+</span><span class='line'>  python2.7 python-pip python-dev</span></code></pre></td></tr></table></div></figure>
+
+
+<p>These packages should be enough to get going with Octopress. The next step is to set up a user so that you don&rsquo;t have to run the rake commands as root.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># Add blogger user
+</span><span class='line'>  RUN adduser --disabled-password --gecos "" blogger && \
+</span><span class='line'>  echo "blogger ALL=(root) NOPASSWD:ALL" &gt; /etc/sudoers
+</span><span class='line'>
+</span><span class='line'>  USER blogger</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next create the working folder <code>octopress</code> and grant permissions to blogger to by changing ownership of the folders where you need to make changes in the future</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># Directory for the blog files
+</span><span class='line'>RUN sudo mkdir /octopress
+</span><span class='line'>WORKDIR /octopress
+</span><span class='line'>
+</span><span class='line'># Set permissions so blogger can install gems
+</span><span class='line'>  RUN sudo chown -Rv blogger:blogger /octopress
+</span><span class='line'>  RUN sudo chown -Rv blogger:blogger /var/lib/gems
+</span><span class='line'>  RUN sudo chown -Rv blogger:blogger /usr/local/bin</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Running <code>rake preview</code> in your octopress blog folder will generate the blog and serve it on port 4000. In order to access the blog from outside the container you need to tell Docker to expose port 4000 for connections.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># Expose port 4000 so we can preview the blog
+</span><span class='line'>EXPOSE 4000</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next it adds the <code>Gemfile</code>. The contents of this file will be custom to your blog so copy it from the blog repository as mentioned earlier. Easiest is to copy your <code>Gemfile</code> to be in the same folder as the <code>Dockerfile</code> since the docker <code>ADD</code> command is relative to the directory you build from.</p>
+
+<p>The next section will add the <code>Gemfile</code> to the Docker image and install the bundles.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  # Add the Gemfile and install the gems
+</span><span class='line'>  ADD Gemfile /octopress/Gemfile
+</span><span class='line'>  RUN gem install bundler
+</span><span class='line'>  RUN bundle install</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then it adds your gitconfig to the image. This is necessary to provide the same git experience in or outside of the container. As with the <code>Gemfile</code> you&rsquo;ll have to copy your <code>.gitconfig</code> file to the same folder as the <code>Dockerfile</code></p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>ADD .gitconfig /home/blogger/.gitconfig</span></code></pre></td></tr></table></div></figure>
+
+
+<p>And that is it. See the repository mentioned above for the complete Dockerfile.</p>
+
+<h4>Build the docker image</h4>
+
+<p>Everything is ready so you can now build the Docker image.</p>
+
+<ul>
+<li>Get the Dockerfile from Github <code>git clone git@github.com:dirkvanrensburg/octopress2-dockerfile.git octopress-dockerfile</code></li>
+<li>Then copy the <code>Gemfile</code> from the blog repository into the same folder.</li>
+<li>Then copy your <code>.gitconfig</code> file from your home folder into the same folder</li>
+<li>Then in the folder containing you <code>Dockerfile</code> run the following:</li>
+</ul>
+
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>docker build . -t blog/octopress</span></code></pre></td></tr></table></div></figure>
+
+
+<table>
+<thead>
+<tr>
+<th>Flag  </th>
+<th> Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>-t</strong></td>
+<td> Tag the built image with that name. Later you can use the tag to start a container.</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p>
+
+<p>This command instructs Docker to create a container image using the instructions in the <code>Dockerfile</code>. If all goes well you should see a message saying something like this: <code>Successfully built b847ccd963fa</code></p>
+
+<h4>Test the container</h4>
+
+<p>To test the Docker image, start the container using the following command:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>docker run --rm -ti blog/octopress /bin/bash</span></code></pre></td></tr></table></div></figure>
+
+
+<table>
+<thead>
+<tr>
+<th>Flag  </th>
+<th> Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>&ndash;rm</strong></td>
+<td> Clean up by removing the contaier and its filesystem when it exits.</td>
+</tr>
+<tr>
+<td><strong>-ti</strong></td>
+<td> Tells docker to create a pseudo TTY for the container and to keep the standard in open so you can send keystrokes to the container.</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/>
+The container will start up and your terminal should be attached and in the <code>octopress</code> folder. You should see something like:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>blogger@eba0e6a691ef:/octopress$</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The <code>exit</code> command will exit the container and clean up.</p>
+
+<h3>Rakefile</h3>
+
+<p>In order to preview the blog while working on a post, you need to change the <code>Rakefile</code> in the root of the blog repository to bind the preview server to the IP wildcard <code>0.0.0.0</code>. This makes it possible to access the blog preview in your browser at <code>http://localhost:4000</code></p>
+
+<p><strong>Change</strong></p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  rackupPid = Process.spawn("rackup --port #{server_port}")</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>To</strong></p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>  rackupPid = Process.spawn("rackup -o 0.0.0.0 --port #{server_port}")</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Launch the container</h3>
+
+<p>The next step is to launch the container. Execute this command from anywhere, replacing the paths to your blog and .ssh keys:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>docker run -p 4000:4000 --rm --volume &lt;absolute-path-to-blog-repository&gt;:/octopress --volume &lt;absolute-path-to-user-home&gt;/.ssh:/home/blogger/.ssh -ti blog/octopress /bin/bash</span></code></pre></td></tr></table></div></figure>
+
+
+<table>
+<thead>
+<tr>
+<th>Flag    </th>
+<th> Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>docker run</strong> </td>
+<td> Instructs docker to run a previously built image. <code>blog/octopress</code> in this case</td>
+</tr>
+<tr>
+<td><strong>-p 4000:4000</strong> </td>
+<td> Instructs docker to expose the internal (to the container) port to the host interfaces so that the host can send data to a process listening on that port in the container</td>
+</tr>
+<tr>
+<td><strong>&ndash;rm</strong> </td>
+<td> Tells docker to remove the container and its file system when it exits. We don&rsquo;t need to keep the container around since the blog source is external to the image</td>
+</tr>
+<tr>
+<td><strong>&ndash;volume</strong> </td>
+<td> <code>volume</code> is used to mount folders on the host system into the container. This allow processes in the container to access the files as if they are local to the container. In this case two folders are mounted. The blog repository as <code>/octopress</code> and the local <code>.ssh</code> folder of the host user as <code>/home/blogger/.ssh</code>. The ssh keys are used by git to authenticate and encrypt traffic to and from github. Feel free to change this so that only the github keys are available in the container.</td>
+</tr>
+<tr>
+<td><strong>-ti</strong> </td>
+<td> Tells docker to create a pseudo TTY for the container and to keep the standard in open so you can send keystrokes to the container.</td>
+</tr>
+<tr>
+<td><strong>blog/octopress</strong> </td>
+<td> The name of the image to run. This is the image built earlier using <code>docker build</code></td>
+</tr>
+<tr>
+<td><strong>/bin/bash</strong> </td>
+<td> The command to run when starting the container.</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p>
+
+<p>Docker will start the container, create a pseudo tty, open standard in and run <code>/bin/bash</code> so that your terminal is now effectively <em>inside</em> the container.</p>
+
+<blockquote><p><small>It is handy to place the command above in a script in the <code>~/bin</code> folder of your user. For example create a file called <code>~/bin/blog</code> and place the command in there. Then you can run <code>blog</code> from any terminal to immediately start and access the container. </small></p></blockquote>
+
+<h3>Do blog stuff</h3>
+
+<p>Now run the Octopress blogging commands as you would if Ruby was installed on your local machine.</p>
+
+<h4>Install theme</h4>
+
+<p>If you created a new Octopress blog then you now have to install your theme. The following installs the default Octopress theme:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>rake install</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>New post</h4>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>rake new_post</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Will ask for the post name and create the post file in <code>source/_posts</code></p>
+
+<h4>Preview</h4>
+
+<p>To preview blog posts:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>rake preview</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then in your browser navigate to <code>http://localhost:4000</code> and you should see the preview of your blog.</p>
+
+<h4>Generate</h4>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>rake generate</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This will generate the blog into the <code>public</code> folder</p>
+
+<h4>Publish</h4>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>rake deploy</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This will commit the generated blog and push it to github.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017/02/16/a-run-around-with-hazelcast/">Hazelcast, JCache and Spring Boot</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-02-16T21:09:39+00:00'><span class='date'><span class='date-month'>Feb</span> <span class='date-day'>16</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>9:09 pm</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="https://hazelcast.com/">Hazelcast</a> is an in memory data grid which enables data sharing between nodes in a server cluster along with a full set of other data grid features. It also
+implements the <a href="https://jcp.org/aboutJava/communityprocess/final/jsr107/index.html">JCache (JSR107)</a> caching standard so it is ideal for building a data aggregation service.</p>
+
+<p>In this post I&rsquo;ll go through the motions of adding Hazelcast to a Spring Boot REST application and resolving the issues until we have a functioning REST service
+with its response cached in Hazelcast via JCache annotations.</p>
+
+<blockquote><p><small><strong>TLDR;</strong> I suggest reading the post to understand the eventual solution, but if you are impatient see the solution on github:
+<br/>
+* <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache">hazelcast-jcache option 1 and 2</a>
+and<br/>
+* <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3">hazelcast-jcache option 3</a></small></p>
+
+<p><small><strong>UPDATE 1:</strong> It seems that this issue will be resolved soon due to the hard work of <a href="https://github.com/snicoll">@snicoll</a> over at Spring Boot and the Hazelcast community. See the issues:</p>
+
+<ul>
+<li><a href="https://github.com/spring-projects/spring-boot/issues/8467">https://github.com/spring-projects/spring-boot/issues/8467</a></li>
+<li><a href="https://github.com/hazelcast/hazelcast/issues/10007">https://github.com/hazelcast/hazelcast/issues/10007</a></li>
+<li><a href="https://github.com/hazelcast/hazelcast/pull/9973">https://github.com/hazelcast/hazelcast/pull/9973</a>
+</small></li>
+</ul>
+
+
+<p><small><strong>UPDATE 2:</strong> This problem described in this post was fixed in Spring Boot release 1.5.3. Check <a href="https://github.com/dirkvanrensburg/hazelcast-springboot-jcache">this repository</a> for a clean example based on Spring boot 1.5.3.
+I am leaving the post here since it is still interesting due to the different ways the problem could be worked around.</small></p></blockquote>
+
+<h3>Versions</h3>
+
+<table>
+<thead>
+<tr>
+<th>Dependency  </th>
+<th> Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Spring Boot </td>
+<td> 1.5.1</td>
+</tr>
+<tr>
+<td>Hazelcast   </td>
+<td> 3.7.5</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p>
+
+<h3>Spring boot REST</h3>
+
+<p>I am going to assume a working knowledge of building REST services using Spring Boot so I won&rsquo;t be going into too much detail here. Building a REST service in Spring is really easy and
+ a quick Google will bring up a couple of tutorials on the subject.</p>
+
+<p>This post will build on top of a basic REST app found on <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/master">github</a>. If you clone that you should be able to
+follow along.</p>
+
+<h3>Adding Hazelcast</h3>
+
+<p>To add Hazelcast to an existing Spring Boot project is very easy. All you have to do is add a dependency on Hazelcast, provide Hazelcast configuration and start using it.</p>
+
+<h4>Step 1</h4>
+
+<p>For maven add the following dependencies to your project <code>pom.xml</code> file:</p>
+
+<figure class='code'><figcaption><span>Hazelcast dependencies in pom file</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='XML'><span class='line'>     <span class="nt">&lt;dependency&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;groupId&gt;</span>com.hazelcast<span class="nt">&lt;/groupId&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;artifactId&gt;</span>hazelcast<span class="nt">&lt;/artifactId&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/dependency&gt;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nt">&lt;dependency&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;groupId&gt;</span>com.hazelcast<span class="nt">&lt;/groupId&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;artifactId&gt;</span>hazelcast-spring<span class="nt">&lt;/artifactId&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;version&gt;</span>${hazelcast.version}<span class="nt">&lt;/version&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/dependency&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>Step 2</h4>
+
+<p>I left the following Hazelcast configuration empty to keep things simple for now. Hazelcast will apply defaults for all the settings if you leave the configuration empty.
+You can either provide a <code>hazelcast.xml</code> file on the classpath (e.g. <code>src/main/resources</code>)</p>
+
+<figure class='code'><figcaption><span>XML expample of default Hazelcast configuration </span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='XML'><span class='line'><span class="nt">&lt;hazelcast</span> <span class="na">xsi:schemaLocation=</span><span class="s">&quot;http://www.hazelcast.com/schema/config hazelcast-config-3.7.xsd&quot;</span>
+</span><span class='line'>       <span class="na">xmlns=</span><span class="s">&quot;http://www.hazelcast.com/schema/config&quot;</span>
+</span><span class='line'>       <span class="na">xmlns:xsi=</span><span class="s">&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="nt">&lt;/hazelcast&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>or provide a <code>com.hazelcast.config.Config</code> bean by means of Spring Java configuration like this:</p>
+
+<figure class='code'><figcaption><span>Java example of default Hazelcast configuration</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@Configuration</span>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">HazelcastConfig</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Bean</span>
+</span><span class='line'>    <span class="kd">public</span> <span class="n">Config</span> <span class="nf">getConfig</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">return</span> <span class="k">new</span> <span class="nf">Config</span><span class="o">();</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p><small>The hazelcast config can also be externalised from the application by
+passing the <code>-Dhazelcast.config</code> system property when starting the service.</small></p></blockquote>
+
+<h4>Step 3</h4>
+
+<p>Hazelcast will not start up if you start the application now. The Spring magic happens because of the
+<code>org.springframework.boot.autoconfigure.hazelcast.HazelcastAutoConfiguration</code> configuration class which is conditionally loaded by Spring
+whenever the application context sees that:</p>
+
+<ol>
+<li><code>HazelcastInstance</code> is on the classpath</li>
+<li>There is an unresolved dependency on a bean of type <code>HazelcastInstance</code></li>
+</ol>
+
+
+<p>To start using Hazelcast let&rsquo;s create a special service that will wire in a Hazelcast instance. The service doesn&rsquo;t do anything since it exists only to illustrate how
+Hazelcast is configured and started by Spring.</p>
+
+<figure class='code'><figcaption><span>Illustrate starting Hazelcast by adding a dependency</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@Service</span>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">MapService</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="nd">@Autowired</span>
+</span><span class='line'>    <span class="kd">private</span> <span class="n">HazelcastInstance</span> <span class="n">instance</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you start the application now and monitor the logs you will see that Hazelcast is indeed starting up. You should see something like:</p>
+
+<pre><code>[LOCAL] [dev] [3.7.5] Prefer IPv4 stack is true.                                                                                             
+[LOCAL] [dev] [3.7.5] Picked [192.168.1.1]:5701, using socket ServerSocket[addr=/0:0:0:0:0:0:0:0,localport=5701], bind any local is true   
+[192.168.1.1]:5701 [dev] [3.7.5] Hazelcast 3.7.5 (20170124 - 111f332) starting at [192.168.1.1]:5701                                     
+[192.168.1.1]:5701 [dev] [3.7.5] Copyright (c) 2008-2016, Hazelcast, Inc. All Rights Reserved.                                             
+[192.168.1.1]:5701 [dev] [3.7.5] Configured Hazelcast Serialization version : 1                                                            
+</code></pre>
+
+<p>and a bit further down:</p>
+
+<pre><code>Members [1] {                                                               
+    Member [192.168.1.1]:5701 - f7225da2-a428-4849-944f-43abfb12063a this 
+}                                                                           
+</code></pre>
+
+<blockquote><p><small> This is great! Hazelcast running with almost no effort at all!</small></p></blockquote>
+
+<h3>Add JCache</h3>
+
+<p>Next we want to start using Hazelcast as a JCache provider. To do this add a dependency on <code>spring-boot-starter-cache</code> in your pom file.</p>
+
+<figure class='code'><figcaption><span>Spring Boot Caching dependency in pom file </span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='XML'><span class='line'><span class="nt">&lt;dependency&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;groupId&gt;</span>org.springframework.boot<span class="nt">&lt;/groupId&gt;</span>o
+</span><span class='line'>    <span class="nt">&lt;artifactId&gt;</span>spring-boot-starter-cache<span class="nt">&lt;/artifactId&gt;</span>
+</span><span class='line'><span class="nt">&lt;/dependency&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Then, in order to use the annotations, add a dependency on the JCache API</p>
+
+<figure class='code'><figcaption><span>JCache dependency in pom file</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='XML'><span class='line'><span class="nt">&lt;dependency&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;groupId&gt;</span>javax.cache<span class="nt">&lt;/groupId&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;artifactId&gt;</span>cache-api<span class="nt">&lt;/artifactId&gt;</span>
+</span><span class='line'><span class="nt">&lt;/dependency&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Finally to tell Spring to now configure caching add the <code>@EnableCaching</code> annotation to the Spring boot application class. The Spring boot application class is the one
+that is currently annotated with <code>@SpringBootApplication</code></p>
+
+<figure class='code'><figcaption><span>Enable Caching </span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@SpringBootApplication</span>
+</span><span class='line'><span class="nd">@EnableCaching</span>
+</span><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Application</span> <span class="o">{</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Now something unexpected happens. Starting the application creates two hazelcast nodes which, if your local firewall allows multicast, join up to form a cluster. If multicasting works then you should see
+the following:</p>
+
+<pre><code>Members [2] {
+    Member [192.168.1.1]:5701 - 18383f04-43ac-41fc-a2bc-cd093a9706b6 this
+    Member [192.168.1.1]:5702 - b654cb85-7b59-489d-b599-64ddd2dc0730
+}
+
+2017-02-16 08:41:46.154  INFO 14141 --- [ration.thread-0] c.h.internal.cluster.ClusterService      : [192.168.1.1]:5702 [dev] [3.7.5] 
+
+Members [2] {
+    Member [192.168.1.1]:5701 - 18383f04-43ac-41fc-a2bc-cd093a9706b6
+    Member [192.168.1.1]:5702 - b654cb85-7b59-489d-b599-64ddd2dc0730 this
+}
+</code></pre>
+
+<p>This is saying that there are two Hazelcast nodes running; One on port <code>5701</code> and another on port <code>5702</code> and they have joined to form a cluster.</p>
+
+<blockquote><p><small> This is an unexpected complication, but lets ignore the second instance for now.</small></p></blockquote>
+
+<h3>Caching some results</h3>
+
+<p>Let&rsquo;s see if the caching works. Firstly we have to provide some cache configuration. Add the following to the <code>hazelcast.xml</code> file.</p>
+
+<figure class='code'><figcaption><span>Hazelcast Cache configuration </span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='XML'><span class='line'><span class="nt">&lt;cache</span> <span class="na">name=</span><span class="s">&quot;sumCache&quot;</span><span class="nt">&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;expiry-policy-factory&gt;</span>
+</span><span class='line'>        <span class="nt">&lt;timed-expiry-policy-factory</span> <span class="na">expiry-policy-type=</span><span class="s">&quot;CREATED&quot;</span>
+</span><span class='line'>                                     <span class="na">duration-amount=</span><span class="s">&quot;1&quot;</span>
+</span><span class='line'>                                     <span class="na">time-unit=</span><span class="s">&quot;MINUTES&quot;</span><span class="nt">/&gt;</span>
+</span><span class='line'>    <span class="nt">&lt;/expiry-policy-factory&gt;</span>
+</span><span class='line'><span class="nt">&lt;/cache&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Next, to start caching change the <code>sum</code> function in the <code>CalculatorService</code> to:</p>
+
+<figure class='code'><figcaption><span>Cached Sum Service</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@CacheResult</span><span class="o">(</span><span class="n">cacheName</span><span class="o">=</span><span class="s">&quot;sumCache&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="nd">@RequestMapping</span><span class="o">(</span><span class="n">value</span> <span class="o">=</span> <span class="s">&quot;/calc/{a}/plus/{b}&quot;</span><span class="o">,</span> <span class="n">method</span> <span class="o">=</span> <span class="n">RequestMethod</span><span class="o">.</span><span class="na">GET</span><span class="o">)</span>
+</span><span class='line'><span class="kd">public</span> <span class="n">CalcResult</span> <span class="nf">sum</span><span class="o">(</span><span class="nd">@PathVariable</span><span class="o">(</span><span class="s">&quot;a&quot;</span><span class="o">)</span> <span class="n">Double</span> <span class="n">a</span><span class="o">,</span> <span class="nd">@PathVariable</span><span class="o">(</span><span class="s">&quot;b&quot;</span><span class="o">)</span> <span class="n">Double</span> <span class="n">b</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>     <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">String</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="s">&quot;******&gt; Calculating %s + %s&quot;</span><span class="o">,</span><span class="n">a</span><span class="o">,</span><span class="n">b</span><span class="o">));</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="k">return</span> <span class="k">new</span> <span class="nf">CalcResult</span><span class="o">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ol>
+<li>On <code>line 1</code> we added the <code>@CacheResult</code> annotation to indicate that we want to cache the result of this function and want to place them in the cache called <code>sumCache</code></li>
+<li>On <code>line 4</code> we print a message to standard out so we can see the caching in action</li>
+</ol>
+
+
+<p>Start the application and call the <code>CalculatorService</code> to add two numbers together. You can use <code>curl</code> or simply navigate to the following URL in a browser window</p>
+
+<pre><code>http://localhost:8080/calc/200/plus/100 
+</code></pre>
+
+<blockquote><p><small> <strong>Note:</strong> The port could be something other than 8080. Check the standard out when starting the application for the correct port number</small></p></blockquote>
+
+<p>You&rsquo;ll get the following response</p>
+
+<pre><code>{"result":300.0}
+</code></pre>
+
+<p>and should see this output in standard out:</p>
+
+<pre><code>******&gt; Calculating 200.0 + 100.0
+</code></pre>
+
+<p>Subsequent calls to the service will not print this line,  but if you try again after a minute you&rsquo;ll see the message again.</p>
+
+<blockquote><p>So caching works! But what about the second HazelcastInstance ?</p></blockquote>
+
+<h3>Only one instance</h3>
+
+<p>So you may think that the second Hazelcast instance is due to the example <code>MapService</code> we added earlier. To test that we can disable it by commenting the <code>@Service</code> annotation.
+You can even delete the class if you like, but the application will still start two Hazelcast nodes.</p>
+
+<p>My guess as to what is going on is: When the application context starts, a Hazelcast instance is created by the JCache configuration due to the
+<code>@EnableCaching</code> annotation but this instance is <em>not</em> registered with the Spring context. Later on a new instance is created by the <code>HazelcastAutoConfiguration</code>
+which <em>is</em> managed by Spring and can be injected into other components.</p>
+
+<h3>Solution</h3>
+
+<p>I have found two solutions to the &lsquo;two instance problem&rsquo; so far. Each with its own drawbacks</p>
+
+<h5>Option 1</h5>
+
+<p>I got the following idea from <a href="https://stackoverflow.com/users/5759723/neil-stevenson">Neil Stevenson</a> over on <a href="https://stackoverflow.com/questions/42151600/hazelcast-and-jcache-in-spring-boot-creates-two-instances">stackoverflow</a>.</p>
+
+<figure class='code'><figcaption><span>Disable the Hazelcast auto configuration</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@EnableAutoConfiguration</span><span class="o">(</span><span class="n">exclude</span> <span class="o">=</span> <span class="o">{</span>
+</span><span class='line'>        <span class="c1">// disable Hazelcast Auto Configuration, and use JCache configuration</span>
+</span><span class='line'>    <span class="n">HazelcastAutoConfiguration</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">CacheAutoConfiguration</span>
+</span><span class='line'><span class="o">})</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>Drawback</strong>: You can&rsquo;t use the Hazelcast instance created this way directly. Spring has no knowledge of it, so you can&rsquo;t get it wired in anywhere.</p>
+
+<h5>Option 2</h5>
+
+<p>This as the same effect as option 1 above except that you can use the instance. You have to name the hazelcast instance in the config:</p>
+
+<pre><code>&lt;instance-name&gt;test&lt;/instance-name&gt;
+</code></pre>
+
+<p>and then tell the Spring context to use it by getting it by name:</p>
+
+<figure class='code'><figcaption><span>Bring the instance into Spring</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='Java'><span class='line'><span class="nd">@Bean</span>
+</span><span class='line'><span class="kd">public</span> <span class="n">HazelcastInstance</span> <span class="nf">getInstance</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">Hazelcast</span><span class="o">.</span><span class="na">getHazelcastInstanceByName</span><span class="o">(</span><span class="s">&quot;test&quot;</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>Drawback</strong>: This relies on the order of bean creation so I can only say that it works in Spring Boot 1.5.1.</p>
+
+<h5>Option 3</h5>
+
+<p>The best solution so far is to set and instance name as in Option 2 above and then setting the <code>spring.hazelcast.config=hazelcast.xml</code> in the <code>application.properties</code> file.</p>
+
+<p>see: <a href="https://github.com/dirkvanrensburg/basic-spring-boot-rest/tree/hazelcast-jcache-option3">hazelcast-jcache-option3</a></p>
+
+<h3>Conclusion</h3>
+
+<p>I personally think that option 3 is the best approach. That gives you the best of both worlds with minimum configuration.</p>
+
+<p>Spring Boot can be a bit magical at times and doesn&rsquo;t always do exactly what you would expect, but there is always a way to tell it to get out of the way and do
+it yourself. The people over at Spring are working hard to make everything &lsquo;just work&rsquo; and I am confident that these things will be ironed out over time.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+      <a class="prev" href="/posts/3">&larr; Older</a>
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+    <a class="next" href="/index.html">Newer &rarr;</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <h1>About Me</h1>
+  <p>I am a software developer using various programming languages. I live in Sydney and my twitter handle is @pappanyn</p>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2017/08/24/callbacks-to-observables-in-typescript/">Callbacks to Observables in TypeScript</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad/">Ubuntu and the Dell XPS 9560 Touchpad</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017/04/12/octopress-in-a-docker-container/">Octopress in a Docker Container</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017/02/16/a-run-around-with-hazelcast/">Hazelcast, JCache and Spring Boot</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017/01/11/java-double-and-nan/">Java Double and NaN Weirdness</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/11/28/advanced-metrics-collecting-in-appdynamics/">Extending Metrics for Complex Dashboards in AppDynamics</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/06/22/split-business-transactions-on-oracle-osb-using-appdynamics/">Split Business Transactions on Oracle Service Bus Using AppDynamics</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2017 - Dirk van Rensburg -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: Hazelcast, | Ideas, Solutions, Work in progress]]></title>
-  <link href="http://dirk.kirko.io/blog/categories/hazelcast/atom.xml" rel="self"/>
-  <link href="http://dirk.kirko.io/"/>
-  <updated>2017-05-05T12:19:29+00:00</updated>
-  <id>http://dirk.kirko.io/</id>
+  <link href="http://pappanyn.me/blog/categories/hazelcast/atom.xml" rel="self"/>
+  <link href="http://pappanyn.me/"/>
+  <updated>2017-09-05T08:13:35+00:00</updated>
+  <id>http://pappanyn.me/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Hazelcast, JCache and Spring Boot]]></title>
-    <link href="http://dirk.kirko.io/blog/2017/02/16/a-run-around-with-hazelcast/"/>
+    <link href="http://pappanyn.me/blog/2017/02/16/a-run-around-with-hazelcast/"/>
     <updated>2017-02-16T21:09:39+00:00</updated>
-    <id>http://dirk.kirko.io/blog/2017/02/16/a-run-around-with-hazelcast</id>
+    <id>http://pappanyn.me/blog/2017/02/16/a-run-around-with-hazelcast</id>
     <content type="html"><![CDATA[<p><a href="https://hazelcast.com/">Hazelcast</a> is an in memory data grid which enables data sharing between nodes in a server cluster along with a full set of other data grid features. It also
 implements the <a href="https://jcp.org/aboutJava/communityprocess/final/jsr107/index.html">JCache (JSR107)</a> caching standard so it is ideal for building a data aggregation service.</p>
 

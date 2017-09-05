@@ -1,4 +1,4 @@
 User-agent: *
 Disallow: 
 
-Sitemap: http://dirk.kirko.io/sitemap.xml 
+Sitemap: http://pappanyn.me/sitemap.xml 

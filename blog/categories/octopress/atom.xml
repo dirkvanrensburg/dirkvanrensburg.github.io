@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Category: Octopress, | Ideas, Solutions, Work in progress]]></title>
-  <link href="http://dirk.kirko.io/blog/categories/octopress/atom.xml" rel="self"/>
-  <link href="http://dirk.kirko.io/"/>
-  <updated>2017-05-05T12:19:29+00:00</updated>
-  <id>http://dirk.kirko.io/</id>
+  <link href="http://pappanyn.me/blog/categories/octopress/atom.xml" rel="self"/>
+  <link href="http://pappanyn.me/"/>
+  <updated>2017-09-05T08:13:35+00:00</updated>
+  <id>http://pappanyn.me/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Octopress in a Docker Container]]></title>
-    <link href="http://dirk.kirko.io/blog/2017/04/12/octopress-in-a-docker-container/"/>
+    <link href="http://pappanyn.me/blog/2017/04/12/octopress-in-a-docker-container/"/>
     <updated>2017-04-12T22:46:14+00:00</updated>
-    <id>http://dirk.kirko.io/blog/2017/04/12/octopress-in-a-docker-container</id>
+    <id>http://pappanyn.me/blog/2017/04/12/octopress-in-a-docker-container</id>
     <content type="html"><![CDATA[<p>I use <a href="http://octopress.org/">Octopress</a> for my, albeit infrequent, blogging. I like the idea of statically generating the blog site with the posts and keeping it all in Git. I also enjoy the ability to quickly type up a post using <a href="https://www.google.com.au/webhp?sourceid=chrome-instant&amp;ion=1&amp;espv=2&amp;ie=UTF-8#q=markdown">markdown</a> and then publish it. No need to log in to a site to write the post.</p>
 
 <p>My biggest problem with Octopress is that it requires me to install and manage a <a href="https://www.ruby-lang.org/en/">Ruby</a> environment. Either by outright installing Ruby on my machine or through <a href="https://github.com/rbenv/rbenv">rbenv</a>. This usually means, for me at least, a struggle to get all the gems successfully installed. Adding plugins often result in errors while installing gems either due to dependencies between gem versions, or some system level dependency that is not available.</p>
