@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url>
-<loc>http://pappanyn.me/blog/2017/08/24/callbacks-to-observables-in-typescript/</loc>
-<lastmod>2017-08-24T22:24:08+00:00</lastmod>
-</url>
-<url>
 <loc>http://pappanyn.me/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad/</loc>
 <lastmod>2017-05-03T23:19:47+00:00</lastmod>
 </url>
@@ -96,17 +92,5 @@
 </url>
 <url>
 <loc>http://pappanyn.me/blog/categories/ubuntu/</loc>
-</url>
-<url>
-<loc>http://pappanyn.me/blog/categories/programming/</loc>
-</url>
-<url>
-<loc>http://pappanyn.me/blog/categories/typescript/</loc>
-</url>
-<url>
-<loc>http://pappanyn.me/blog/categories/functional/</loc>
-</url>
-<url>
-<loc>http://pappanyn.me/blog/categories/observable/</loc>
 </url>
 </urlset>

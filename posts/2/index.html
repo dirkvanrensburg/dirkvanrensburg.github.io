@@ -9,7 +9,7 @@
   <meta name="author" content="Dirk van Rensburg">
 
   
-  <meta name="description" content="I use Octopress for my, albeit infrequent, blogging. I like the idea of statically generating the blog site with the posts and keeping it all in Git &hellip;">
+  <meta name="description" content="Hazelcast is an in memory data grid which enables data sharing between nodes in a server cluster along with a full set of other data grid features. &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -85,398 +85,6 @@
     <div id="content">
       <div class="blog-index">
   
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2017/04/12/octopress-in-a-docker-container/">Octopress in a Docker Container</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-<time class='entry-date' datetime='2017-04-12T22:46:14+00:00'><span class='date'><span class='date-month'>Apr</span> <span class='date-day'>12</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>10:46 pm</span></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>I use <a href="http://octopress.org/">Octopress</a> for my, albeit infrequent, blogging. I like the idea of statically generating the blog site with the posts and keeping it all in Git. I also enjoy the ability to quickly type up a post using <a href="https://www.google.com.au/webhp?sourceid=chrome-instant&amp;ion=1&amp;espv=2&amp;ie=UTF-8#q=markdown">markdown</a> and then publish it. No need to log in to a site to write the post.</p>
-
-<p>My biggest problem with Octopress is that it requires me to install and manage a <a href="https://www.ruby-lang.org/en/">Ruby</a> environment. Either by outright installing Ruby on my machine or through <a href="https://github.com/rbenv/rbenv">rbenv</a>. This usually means, for me at least, a struggle to get all the gems successfully installed. Adding plugins often result in errors while installing gems either due to dependencies between gem versions, or some system level dependency that is not available.</p>
-
-<p>These system level dependencies really bugs me so when I recently replaced my laptop I decided to keep my OS Ruby free by managing the Octopress Ruby environment and the system level dependencies in a <a href="https://www.docker.com/">Docker</a> container rather than using <code>rbenv</code></p>
-
-<blockquote><p>TLDR; <small>The impatient can find the Dockerfile at: <a href="https://github.com/dirkvanrensburg/octopress2-dockerfile">https://github.com/dirkvanrensburg/octopress2-dockerfile</a></small></p></blockquote>
-
-<h3>Tested environment</h3>
-
-<table>
-<thead>
-<tr>
-<th>Thing     </th>
-<th> Version</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>OS        </td>
-<td> Ubuntu 16.04</td>
-</tr>
-<tr>
-<td>Docker    </td>
-<td> 17.03.1-ce</td>
-</tr>
-<tr>
-<td>Octopress </td>
-<td> 2.0</td>
-</tr>
-</tbody>
-</table>
-
-
-<p><br/></p>
-
-<h3>Assumptions</h3>
-
-<p><a href="github-pages">Github Pages</a> to publish and host my blog and this post assumes that you are too. However, this post should be useful even if you don&rsquo;t want to use Github Pages.</p>
-
-<h3>Octopress</h3>
-
-<p>Now that you have a working container, it is time to do the Octopress installation. You can either start with a fresh copy of Octopress, see the <a href="http://octopress.org/docs/">documentation</a> or with an existing Octopress blog. If you have an exising blog then you may have to tweak the Dockerfile a bit to add any system level dependencies your blog my have.</p>
-
-<h4>New Octopress blog</h4>
-
-<p>For a new blog you have a bit of a chicken and egg problem. You need to get the Octopress stuff, but you can&rsquo;t run any Ruby dependent commands because Ruby is in the Docker container.</p>
-
-<p>Clone Octopress and take note of the <code>Gemfile</code> in the root of the repository:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>git clone git://github.com/imathis/octopress.git octopress
-</span><span class='line'>cd octopress</span></code></pre></td></tr></table></div></figure>
-
-
-<blockquote><p><small> You&rsquo;ll need the <code>Gemfile</code> in the root of the blog repository for building the Docker image later on. </small></p></blockquote>
-
-<h4>Existing octopress blog</h4>
-
-<p>The following steps should get the blog repository in the correct state for generating and publishing.</p>
-
-<ul>
-<li>If you don&rsquo;t have a current copy of your blog then clone the repository from Github</li>
-<li>Once you have cloned the repository change into the repository directory and change the working branch from <code>master</code> to <code>source</code></li>
-<li>Create the <code>_deploy</code> folder and change into that directory</li>
-<li>Now link the <code>_deploy</code> directory with the master branch of your blog repository
-
-<ul>
-<li><code>git init</code></li>
-<li><code>git remote add origin &lt;githubrepourl&gt;</code></li>
-<li><code>git pull origin master</code></li>
-</ul>
-</li>
-</ul>
-
-
-<blockquote><p><small> You&rsquo;ll need the <code>Gemfile</code> in the root of the blog repository for building the Docker image later on. </small></p></blockquote>
-
-<h3>Docker</h3>
-
-<p>Docker gives you the ability to create a lightweight container for processes and their dependencies. You create a container from some published base image and then install the necessary packages as you would on a normal machine. You can then run the container, which will start the required process and run it without poluting the host operating system with unecessary dependencies.</p>
-
-<h4>Dockerfile</h4>
-
-<p>A <code>Dockerfile</code> is a file which tells the Docker daemon what you want in your container. How to write a <code>Dockerfile</code> and what you can do with it is extensively documented <a href="https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices">here</a>.</p>
-
-<p>You basically start with a <code>FROM</code> statement telling Docker where you want to start and then telling it
-which package to install. In this case you have a number of dependencies as seen here:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>FROM ubuntu:16.04
-</span><span class='line'>
-</span><span class='line'>RUN apt-get update -y && apt-get -y install \
-</span><span class='line'>  sudo \
-</span><span class='line'>  gcc make \
-</span><span class='line'>  git \
-</span><span class='line'>  vim less \
-</span><span class='line'>  curl \
-</span><span class='line'>  ruby ruby-dev \
-</span><span class='line'>  python2.7 python-pip python-dev</span></code></pre></td></tr></table></div></figure>
-
-
-<p>These packages should be enough to get going with Octopress. The next step is to set up a user so that you don&rsquo;t have to run the rake commands as root.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># Add blogger user
-</span><span class='line'>  RUN adduser --disabled-password --gecos "" blogger && \
-</span><span class='line'>  echo "blogger ALL=(root) NOPASSWD:ALL" &gt; /etc/sudoers
-</span><span class='line'>
-</span><span class='line'>  USER blogger</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next create the working folder <code>octopress</code> and grant permissions to blogger to by changing ownership of the folders where you need to make changes in the future</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># Directory for the blog files
-</span><span class='line'>RUN sudo mkdir /octopress
-</span><span class='line'>WORKDIR /octopress
-</span><span class='line'>
-</span><span class='line'># Set permissions so blogger can install gems
-</span><span class='line'>  RUN sudo chown -Rv blogger:blogger /octopress
-</span><span class='line'>  RUN sudo chown -Rv blogger:blogger /var/lib/gems
-</span><span class='line'>  RUN sudo chown -Rv blogger:blogger /usr/local/bin</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Running <code>rake preview</code> in your octopress blog folder will generate the blog and serve it on port 4000. In order to access the blog from outside the container you need to tell Docker to expose port 4000 for connections.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># Expose port 4000 so we can preview the blog
-</span><span class='line'>EXPOSE 4000</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Next it adds the <code>Gemfile</code>. The contents of this file will be custom to your blog so copy it from the blog repository as mentioned earlier. Easiest is to copy your <code>Gemfile</code> to be in the same folder as the <code>Dockerfile</code> since the docker <code>ADD</code> command is relative to the directory you build from.</p>
-
-<p>The next section will add the <code>Gemfile</code> to the Docker image and install the bundles.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  # Add the Gemfile and install the gems
-</span><span class='line'>  ADD Gemfile /octopress/Gemfile
-</span><span class='line'>  RUN gem install bundler
-</span><span class='line'>  RUN bundle install</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then it adds your gitconfig to the image. This is necessary to provide the same git experience in or outside of the container. As with the <code>Gemfile</code> you&rsquo;ll have to copy your <code>.gitconfig</code> file to the same folder as the <code>Dockerfile</code></p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>ADD .gitconfig /home/blogger/.gitconfig</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And that is it. See the repository mentioned above for the complete Dockerfile.</p>
-
-<h4>Build the docker image</h4>
-
-<p>Everything is ready so you can now build the Docker image.</p>
-
-<ul>
-<li>Get the Dockerfile from Github <code>git clone git@github.com:dirkvanrensburg/octopress2-dockerfile.git octopress-dockerfile</code></li>
-<li>Then copy the <code>Gemfile</code> from the blog repository into the same folder.</li>
-<li>Then copy your <code>.gitconfig</code> file from your home folder into the same folder</li>
-<li>Then in the folder containing you <code>Dockerfile</code> run the following:</li>
-</ul>
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker build . -t blog/octopress</span></code></pre></td></tr></table></div></figure>
-
-
-<table>
-<thead>
-<tr>
-<th>Flag  </th>
-<th> Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>-t</strong></td>
-<td> Tag the built image with that name. Later you can use the tag to start a container.</td>
-</tr>
-</tbody>
-</table>
-
-
-<p><br/></p>
-
-<p>This command instructs Docker to create a container image using the instructions in the <code>Dockerfile</code>. If all goes well you should see a message saying something like this: <code>Successfully built b847ccd963fa</code></p>
-
-<h4>Test the container</h4>
-
-<p>To test the Docker image, start the container using the following command:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker run --rm -ti blog/octopress /bin/bash</span></code></pre></td></tr></table></div></figure>
-
-
-<table>
-<thead>
-<tr>
-<th>Flag  </th>
-<th> Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>&ndash;rm</strong></td>
-<td> Clean up by removing the contaier and its filesystem when it exits.</td>
-</tr>
-<tr>
-<td><strong>-ti</strong></td>
-<td> Tells docker to create a pseudo TTY for the container and to keep the standard in open so you can send keystrokes to the container.</td>
-</tr>
-</tbody>
-</table>
-
-
-<p><br/>
-The container will start up and your terminal should be attached and in the <code>octopress</code> folder. You should see something like:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>blogger@eba0e6a691ef:/octopress$</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The <code>exit</code> command will exit the container and clean up.</p>
-
-<h3>Rakefile</h3>
-
-<p>In order to preview the blog while working on a post, you need to change the <code>Rakefile</code> in the root of the blog repository to bind the preview server to the IP wildcard <code>0.0.0.0</code>. This makes it possible to access the blog preview in your browser at <code>http://localhost:4000</code></p>
-
-<p><strong>Change</strong></p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  rackupPid = Process.spawn("rackup --port #{server_port}")</span></code></pre></td></tr></table></div></figure>
-
-
-<p><strong>To</strong></p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>  rackupPid = Process.spawn("rackup -o 0.0.0.0 --port #{server_port}")</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Launch the container</h3>
-
-<p>The next step is to launch the container. Execute this command from anywhere, replacing the paths to your blog and .ssh keys:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>docker run -p 4000:4000 --rm --volume &lt;absolute-path-to-blog-repository&gt;:/octopress --volume &lt;absolute-path-to-user-home&gt;/.ssh:/home/blogger/.ssh -ti blog/octopress /bin/bash</span></code></pre></td></tr></table></div></figure>
-
-
-<table>
-<thead>
-<tr>
-<th>Flag    </th>
-<th> Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>docker run</strong> </td>
-<td> Instructs docker to run a previously built image. <code>blog/octopress</code> in this case</td>
-</tr>
-<tr>
-<td><strong>-p 4000:4000</strong> </td>
-<td> Instructs docker to expose the internal (to the container) port to the host interfaces so that the host can send data to a process listening on that port in the container</td>
-</tr>
-<tr>
-<td><strong>&ndash;rm</strong> </td>
-<td> Tells docker to remove the container and its file system when it exits. We don&rsquo;t need to keep the container around since the blog source is external to the image</td>
-</tr>
-<tr>
-<td><strong>&ndash;volume</strong> </td>
-<td> <code>volume</code> is used to mount folders on the host system into the container. This allow processes in the container to access the files as if they are local to the container. In this case two folders are mounted. The blog repository as <code>/octopress</code> and the local <code>.ssh</code> folder of the host user as <code>/home/blogger/.ssh</code>. The ssh keys are used by git to authenticate and encrypt traffic to and from github. Feel free to change this so that only the github keys are available in the container.</td>
-</tr>
-<tr>
-<td><strong>-ti</strong> </td>
-<td> Tells docker to create a pseudo TTY for the container and to keep the standard in open so you can send keystrokes to the container.</td>
-</tr>
-<tr>
-<td><strong>blog/octopress</strong> </td>
-<td> The name of the image to run. This is the image built earlier using <code>docker build</code></td>
-</tr>
-<tr>
-<td><strong>/bin/bash</strong> </td>
-<td> The command to run when starting the container.</td>
-</tr>
-</tbody>
-</table>
-
-
-<p><br/></p>
-
-<p>Docker will start the container, create a pseudo tty, open standard in and run <code>/bin/bash</code> so that your terminal is now effectively <em>inside</em> the container.</p>
-
-<blockquote><p><small>It is handy to place the command above in a script in the <code>~/bin</code> folder of your user. For example create a file called <code>~/bin/blog</code> and place the command in there. Then you can run <code>blog</code> from any terminal to immediately start and access the container. </small></p></blockquote>
-
-<h3>Do blog stuff</h3>
-
-<p>Now run the Octopress blogging commands as you would if Ruby was installed on your local machine.</p>
-
-<h4>Install theme</h4>
-
-<p>If you created a new Octopress blog then you now have to install your theme. The following installs the default Octopress theme:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake install</span></code></pre></td></tr></table></div></figure>
-
-
-<h4>New post</h4>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake new_post</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Will ask for the post name and create the post file in <code>source/_posts</code></p>
-
-<h4>Preview</h4>
-
-<p>To preview blog posts:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake preview</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Then in your browser navigate to <code>http://localhost:4000</code> and you should see the preview of your blog.</p>
-
-<h4>Generate</h4>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake generate</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This will generate the blog into the <code>public</code> folder</p>
-
-<h4>Publish</h4>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>rake deploy</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This will commit the generated blog and push it to github.</p>
-</div>
-  
-  
-
-
-    </article>
   
   
     <article>
@@ -877,6 +485,188 @@ it yourself. The people over at Spring are working hard to make everything &lsqu
 
     </article>
   
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017/01/11/java-double-and-nan/">Java Double and NaN Weirdness</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+<time class='entry-date' datetime='2017-01-11T01:08:52+00:00'><span class='date'><span class='date-month'>Jan</span> <span class='date-day'>11</span><span class='date-suffix'>th</span>, <span class='date-year'>2017</span></span> <span class='time'>1:08 am</span></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>We learn something everyday. We don&rsquo;t always realise it, but we do. Sometimes the thing you learn isn&rsquo;t new at all, but something you sort of knew
+but never really thought about too much.</p>
+
+<p>I recently learned that my understanding of what causes a <code>NaN</code> value in Java&rsquo;s <code>double</code> was wrong.</p>
+
+<h2>The story</h2>
+
+<p>I was working on an integration project and received a bug report on one of my services. The report said that my service is returning an HTTP code &lsquo;500&rsquo; for a specific input message.</p>
+
+<p>During my investigation I found the cause of the exception was an unexpected value returned from a down stream service. It was a SOAP service which returned something like the following in its XML response:</p>
+
+<pre><code>&lt;SomeNumberField type="number"&gt;NaN&lt;/SomeNumberField&gt;
+</code></pre>
+
+<p>I was a bit surprised to see the <code>NaN</code> there since I would expect them to either leave the field off or set it to <code>null</code> if they don&rsquo;t have a value. This looked like a calculation bug since we all know that, in Java and C# at least, dividing a double with 0 results in a <code>NaN</code>. (<em>Spoiler: It doesn&rsquo;t</em>)</p>
+
+<p>However, this got me thinking and I tried to remember what I know about <code>double</code>and <code>NaN</code>. This resulted in an embarrisingly deep spiral down the rabbit hole.</p>
+
+<h2>NaN</h2>
+
+<p>Well if you think about it <code>NaN</code> is kind of like a number in this case, even though NaN means Not-a-Number. It exists to enable calculations with indeterminate results to be represented as a &ldquo;number&rdquo; in the set of valid <code>double</code> values. Without <code>NaN</code> you could get completely wrong results or you&rsquo;ll get an exception, which isn&rsquo;t ideal either. <code>NaN</code> is defined, same as <code>Infinity</code>, to be part of the set of valid doubles.</p>
+
+<pre><code>System.out.println(Double.isNaN(Double.NaN)); //true
+System.out.println(Double.POSITIVE_INFINITY == Double.POSITIVE_INFINITY); //true
+System.out.println(Double.NEGATIVE_INFINITY == Double.NEGATIVE_INFINITY); //true
+</code></pre>
+
+<p>I played around with <code>double</code> a bit and I thought to share it in a post, because I think the various edge cases of <code>double</code> are interesting.</p>
+
+<p>I started with the following experiment:</p>
+
+<pre><code>//Lets make a NaN!
+double NaN = 5.0/0;
+System.out.println("NaN: " + NaN);
+
+&gt;&gt; NaN: Infinity
+</code></pre>
+
+<p><strong>Wait. What?</strong></p>
+
+<p>Turns out that I have lived with this misconception about what happens when you divide a double by zero. I seriously expected that a <code>double</code> divided by 0 is <code>NaN</code>. Well it turns out I was wrong. You get:</p>
+
+<blockquote><p>POSITIVE_INFINITY</p></blockquote>
+
+<pre><code>double infinity = 5.0/0;
+System.out.println((infinity == Double.POSITIVE_INFINITY)); //true
+</code></pre>
+
+<p>I can sort of rationalise that the answer could be infinity because you are dividing something largish with something much much smaller. In fact, dividing it by nothing so you could argue the result of that should be infitely large. Although, mathematically this does not make any sense. x/0 is undefined since there is no number that you can multiply with 0 to get back to x again. (for x &lt;> 0)</p>
+
+<p>Anyway lets play with <code>NaN</code> a bit.</p>
+
+<pre><code>double NaN = Double.NaN;
+System.out.println("NaN: " + NaN); //NaN: NaN
+
+System.out.println((NaN + 10)); //(NaN + 10): NaN
+System.out.println((NaN - 10)); //(NaN - 10): NaN
+System.out.println((NaN - NaN)); //NaN - NaN: NaN
+System.out.println((NaN / 0));     //NaN / 0: NaN
+System.out.println((NaN * 0));     //NaN * 0: NaN
+</code></pre>
+
+<p>Well no surprises here. Once a NaN always a NaN.</p>
+
+<blockquote><p>I used <code>Double.NaN</code> above to be sure I have a <code>NaN</code> but if you want to make one yourself then calculating the square root of a negative number is an easy way:</p></blockquote>
+
+<pre><code>System.out.println((Math.sqrt(-1))); //NaN
+</code></pre>
+
+<h2>Max and Min value</h2>
+
+<p>Before we get to infinity let take a quick look at <code>Double.MAX_VALUE</code> and <code>Double.MIN_VALUE</code>. These are special constants defined on <code>Double</code> which you can use to check if a number is at the maximum of what a double can represent. If a number is equal to <code>Double.MAX_VALUE</code> it means that it is about to overflow into <code>Double.POSITIVE_INFINITY</code>. The same goes for <code>Double.MIN_VALUE</code> except that it will overflow to <code>Double.NEGATIVE_INFINITY</code>.</p>
+
+<p>Something to note about <code>double</code> is that it can represent ridiculously large numbers using a measly 64 bits. The maximum value is larger than <code>1.7*10^308</code> !</p>
+
+<pre><code>System.out.println("Double.MAX_VALUE is large! : " + (Double.MAX_VALUE == 1.7976931348623157 * Math.pow(10,308)));
+
+&gt; Double.MAX_VALUE is large! : true
+</code></pre>
+
+<p>It can represent these large numbers because it encodes numbers as a small real number multiplied by some exponent. See the <a href="https://en.wikipedia.org/wiki/IEEE_754-1985">IEEE spec</a></p>
+
+<p>Let&rsquo;s see what it takes to make <code>Double.MAX_VALUE</code> overflow to infinity.</p>
+
+<pre><code>double max = Double.MAX_VALUE;
+
+System.out.println((max == (max + 1))); //true
+System.out.println((max == (max + 1000))); //true
+System.out.println("EVEN...");
+System.out.println((max == (max + Math.pow(10,291)))); //true
+
+System.out.println("HOWEVER...");
+System.out.println((max == (max + Math.pow(10,292)))); //false
+System.out.println((max + Math.pow(10,292))); //Infinity
+</code></pre>
+
+<p>This ability to represent seriously large numbers comes at a price of accuracy. After a while only changes in the most significant parts of the number can be reflected. As seen in the following code snippet:</p>
+
+<pre><code>double large_num = Math.pow(10,200);
+System.out.println("large_num == (large_num + 1000): " + (large_num == (large_num + 1000))); //true
+</code></pre>
+
+<p>At large integer values the steps between numbers are very very large since the double has no place to record the change if it doesn&rsquo;t affect its most 16 most significant digits. As shown above 1000 plus a very large number is still that same very large number.</p>
+
+<h2>Infinity</h2>
+
+<p>Java&rsquo;s <code>double</code> supports two kinds of infinity. Positive and negative inifity. The easiest to make those are by dividing by 0.</p>
+
+<pre><code>double pos_infinity = 5.0/0;
+System.out.println("POSITIVE_INFINITY == pos_infinity: " + (Double.POSITIVE_INFINITY == pos_infinity));
+
+double neg_infinity = -5.0/0;
+System.out.println("NEGATIVE_INFINITY == neg_infinity: " + (Double.NEGATIVE_INFINITY == neg_infinity));
+</code></pre>
+
+<p>In maths infinity is a numerical concept representing the idea of an infinitly large number. It is used, for example in calculus, to describe an <a href="http://khanacademy.wikia.com/wiki/Limits_at_infinity_where_x_is_unbounded">unbounded limit</a> - some number that can grow without bound.</p>
+
+<p>In this case things are pretty much the same as in maths, where POSITIVE_INFINITY and NEGATIVE_INFINITY are used to represent numbers that
+are infinitely large. However they function more as a way to know something went wrong in your calculation. You are either trying to calculate something that is too large to store in a <code>double</code> or there is some bug in the code.</p>
+
+<p>There are once again some interesting things to note when playing with positive and negative infinity.</p>
+
+<pre><code>double pos = Double.POSITIVE_INFINITY;
+
+System.out.println("POSITIVE_INFINITY + 1000 = " + (pos + 1000));
+System.out.println("POSITIVE_INFINITY + 10^1000 = " + (pos + Math.pow(10,1000)));
+System.out.println("POSTIVE_INFINITY * 2 = " + (pos * 2));
+</code></pre>
+
+<p>Once the value is infinity it stays there even if you add or substract rediculously large numbers. However there is one interesting case, when you substract infinity from infinity:</p>
+
+<pre><code>double pos = Double.POSITIVE_INFINITY;
+double neg = Double.NEGATIVE_INFINITY;
+
+System.out.println("POSITIVE_INFINITY - POSITIVE_INFINITY = " + (pos - pos));
+System.out.println("POSITIVE_INFINITY + NEGATIVE_INFINITY = " + (pos + neg));
+</code></pre>
+
+<p>Subtracting infinity from infinity yields <code>NaN</code> and as you would expect adding or subtracting <code>NaN</code> yields a <code>NaN</code> again.</p>
+
+<pre><code>System.out.println("POSTIVE_INFINITY + NaN" + (pos + Double.NaN));
+System.out.println("POSTIVE_INFINITY - NaN" + (pos - Double.NaN));
+</code></pre>
+
+<h2>In closing</h2>
+
+<p>Both Java&rsquo;s <code>float</code> and <code>double</code> types follow the <a href="https://en.wikipedia.org/wiki/IEEE_754-1985">IEEE 754-1985</a> standard for representing floating point numbers. I am not going to go into great detail on the internals of <code>double</code>, but it suffice to say that <code>double</code> and <code>float</code> are not perfectly accurate when you use them to perform arithmetic. The Java <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html">primitive type documentation</a> says:</p>
+
+<blockquote><p>This data type should never be used for precise values, such as currency. For that,
+  you will need to use the java.math.BigDecimal class instead.</p></blockquote>
+
+<p>If precision is you main concern then it is generally better to stick with good old <code>java.math.BigDecimal</code>. BigDecimal is immutable which makes it nice to work with, but the most important thing is precision. You have absolute control over number precision, without the rounding or overflow surprises you get with <code>double</code> and <code>float</code>. However, if performance is the main concern it is better to stick with <code>float</code> or <code>double</code> and live with the inaccuracies.</p>
+
+<p>For more information on how Java handles NaN, infinity and rouding read the documentation <a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-4.html#jls-4.2.4">here</a>.</p>
+</div>
+  
+  
+
+
+    </article>
+  
   <div class="pagination">
     
       <a class="prev" href="/posts/3">&larr; Older</a>
@@ -896,10 +686,6 @@ it yourself. The people over at Spring are working hard to make everything &lsqu
 <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
-    
-      <li class="post">
-        <a href="/blog/2017/08/24/callbacks-to-observables-in-typescript/">Callbacks to Observables in TypeScript</a>
-      </li>
     
       <li class="post">
         <a href="/blog/2017/05/03/ubuntu-and-the-dell-xps-9560-touchpad/">Ubuntu and the Dell XPS 9560 Touchpad</a>
