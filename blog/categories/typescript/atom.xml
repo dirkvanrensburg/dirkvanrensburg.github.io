@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Typescript, | Ideas, Solutions, Work in progress]]></title>
+  <link href="http://pappanyn.me/blog/categories/typescript/atom.xml" rel="self"/>
+  <link href="http://pappanyn.me/"/>
+  <updated>2017-09-15T07:26:32+00:00</updated>
+  <id>http://pappanyn.me/</id>
+  <author>
+    <name><![CDATA[Dirk van Rensburg]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Callbacks to Observables in TypeScript]]></title>
+    <link href="http://pappanyn.me/blog/2017/08/24/callbacks-to-observables-in-typescript/"/>
+    <updated>2017-08-24T22:24:08+00:00</updated>
+    <id>http://pappanyn.me/blog/2017/08/24/callbacks-to-observables-in-typescript</id>
+    <content type="html"><![CDATA[<blockquote><h4>TLDR;</h4>
+
+<p>Functional programming techniques makes it possible to reduce the amount of boiler plate code required when working with JavaScript libraries that require traditional callback functions. This blog will show how to drastically reduce the code and how to turn the callback handlers into observables.</p></blockquote>
+
+<h3>Back story</h3>
+
+<p>I was working on hooking the <a href="https://github.com/aws/amazon-cognito-identity-js">AWS Cognito JS SDK</a> into my Angular 4 project. I was using <a href="https://github.com/systemjs/systemjs">SytemJS</a> and <a href="https://rollupjs.org/">RollupJS</a> and after struggling for some time to get the bundling to work properly, I gave up and decided to just use the plain JavaScript API.</p>
+
+<p>This meant that not only was I missing the nice TypeScript typings for the SDK, but also faced with the clunky callback patterns used in some JavaScript API&rsquo;s.</p>
+
+<h3>JavaScript Callbacks</h3>
+
+<p>There are various common JavaScript patterns for handling async methods via callbacks. These callback mechanisms allow callers to provide a hook so that they can be called back in the future with the result or error.</p>
+
+<p>One common approach is that the method requires a single callback function in addition to its normal parameters. The called function will then invoke the callback function with an error as the first parameter, or a result as the second parameter. It is up to the callback function to determine whether it received an error or not.</p>
+
+<p>The following contrived example shows how the <code>sendMsg</code> function will invoke the callback and pass an error message or success result.
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='javascript'><span class='line'><span class="kd">function</span> <span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="nx">message</span> <span class="o">===</span> <span class="o">&amp;</span><span class="nx">lsquo</span><span class="p">;</span><span class="nx">dontsend</span><span class="o">&amp;</span><span class="nx">rsquo</span><span class="p">;)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">callback</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">lsquo</span><span class="p">;</span><span class="nx">whoops</span> <span class="nx">not</span> <span class="nx">sending</span><span class="o">!&amp;</span><span class="nx">rsquo</span><span class="p">;);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">callback</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">lsquo</span><span class="p">;</span><span class="nx">Success</span><span class="o">!&amp;</span><span class="nx">rsquo</span><span class="p">;);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span><span class="o">&lt;</span><span class="err">/p&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="nx">p</span><span class="o">&gt;</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">error</span><span class="p">,</span> <span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">ldquo</span><span class="p">;</span><span class="nx">An</span> <span class="nx">error</span> <span class="nx">occurred</span><span class="o">&amp;</span><span class="nx">rdquo</span><span class="p">;</span> <span class="o">+</span> <span class="nx">error</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">ldquo</span><span class="p">;</span><span class="nx">Message</span> <span class="nx">was</span> <span class="nx">sent</span> <span class="nx">successfully</span><span class="p">.</span><span class="o">&amp;</span><span class="nx">rdquo</span><span class="p">;</span> <span class="o">+</span> <span class="nx">result</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">})</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<p>As mentioned before there are other common ways to do callbacks such as requiring separate success and error handling functions, or using objects with <code>onSuccess</code> and <code>onFailure</code> methods. However, the solution is similar regardless of the callback pattern followed so the rest of this article will use the single callback function approach above as the example.</p>
+
+<h3>TypeScript, Observables and callbacks</h3>
+
+<p>Calling such a JavaScript function from TypeScript looks something like this:</p>
+
+<pre><code class="ts">public sendMessage(message: string, cb: (err:any, res:any) =&gt; void) {
+
+    sendJS.sendMsg(message, cb);
+}
+</code></pre>
+
+<p>This is all fine and works ok but I don&rsquo;t want the clients of my code to have to pass a callback handler. What I really want is to return an <a href="http://reactivex.io/documentation/observable.html">Observable</a> to my clients. I can achieve this as follows:</p>
+
+<pre><code class="ts">public sendMessage(message: string): Observable&lt;string&gt; {
+
+    let sendResult = new Subject&lt;string&gt;();   
+    sendJS.sendMsg(message, 
+            (err:any, res:any) =&gt; {
+                if (!!err) {
+                    sendResult.error(err);
+                }
+                else {
+                    sendResult.next("Message was sent successfully." + res);
+                }    
+            }
+    );
+
+    return sendResult.asObservable();
+}
+</code></pre>
+
+<p>However the bit on <code>line 6</code> where we check for the error is a bit tedious. I will have to duplicate this all over the place and I don&rsquo;t necessarily know what to do with the error. In most cases I will just send it along for the client to deal with.</p>
+
+<p>To get rid of the error handling duplication I write a function to take the subject, success and <em>optional</em> error handler functions and return a callback function</p>
+
+<pre><code class="ts">interface CallbackFunction {
+    (error: any, result: any): void;
+}
+
+ function subToHandler&lt;T&gt;(subject: Subject&lt;T&gt;, successFn: (m:any) =&gt; T, errorFn?: (a:any) =&gt; any): CallbackFunction {
+    return (error:any, result:any) =&gt; {
+        if (!!error) {
+            if (!!errorFn) {
+                subject.error(errorFn(error));
+            }
+            else {
+                subject.error(error);
+            }
+        }
+        else {
+            subject.next(successFn(result));
+        }
+    };
+ }
+</code></pre>
+
+<p>The interface <code>CallbackFunction</code> cleans the method signature up a bit and makes things a bit easier to read.</p>
+
+<p>The returned callback function checks the error and, if an error handler was provided, applies it before calling <code>error</code> on the subject <code>(line 5)</code>. If no error is provided to the callback function then it will call <code>next</code> on the subject to pass the valid result on to the observers.</p>
+
+<p>This means that I can now rewrite the send message code as follows:
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kr">public</span> <span class="nx">sendMessage</span><span class="p">(</span><span class="nx">message</span>: <span class="kt">string</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span> <span class="p">{</span><span class="o">&lt;</span><span class="err">/p&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="nx">pre</span><span class="o">&gt;&lt;</span><span class="nx">code</span><span class="o">&gt;</span><span class="kd">let</span> <span class="nx">sendResult</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&amp;</span><span class="nx">lt</span><span class="p">;</span><span class="kt">string</span><span class="o">&amp;</span><span class="nx">gt</span><span class="p">;();</span>
+</span><span class='line'><span class="nx">sendJS</span><span class="p">.</span><span class="nx">sendMsg</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span>
+</span><span class='line'>    <span class="nx">subToHandler</span><span class="p">(</span><span class="nx">sendResult</span><span class="p">,</span>
+</span><span class='line'>        <span class="nx">res</span> <span class="o">=&amp;</span><span class="nx">gt</span><span class="p">;</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">return</span> <span class="s2">&quot;Message was sent successfully.&quot;</span> <span class="o">+</span> <span class="nx">res</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">)</span>
+</span><span class='line'><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">return</span> <span class="nx">sendResult</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
+</span><span class='line'><span class="o">&lt;</span><span class="err">/code&gt;&lt;/pre&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="nx">p</span><span class="o">&gt;</span><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<p>This is much better since I don&rsquo;t have to call <code>next</code> and <code>error</code> on the subject and I don&rsquo;t have to check for the error anymore. There is also much less code because I no longer have to explicitly handle the error. It can be fully delegated to the observers of the subject.</p>
+
+<p>However, this still not perfect. I will be duplicating the <code>Subject</code> and <code>Observable</code> creation lines everywhere. It also looks a bit weird to be creating a Subject and passing it on to another function.</p>
+
+<p>I can get rid of the statements on <code>lines 3 and 12</code> above by writing another function which will return the Observable, relieving me from creating the subject explicitly.</p>
+
+<p>Consider the following snippet:
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='ts'><span class='line'><span class="kd">function</span> <span class="nx">exec</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">fn</span><span class="o">:</span> <span class="p">(</span><span class="nx">cb</span>:<span class="kt">CallbackFunction</span><span class="p">)</span><span class="o">=&gt;</span><span class="k">void</span><span class="p">,</span> <span class="nx">successFn</span><span class="o">:</span> <span class="p">(</span><span class="nx">a</span>:<span class="kt">any</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">T</span><span class="p">,</span> <span class="nx">errorFn</span><span class="o">?:</span> <span class="p">(</span><span class="nx">e</span>:<span class="kt">any</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">any</span><span class="p">)</span><span class="o">:</span> <span class="nx">Observable</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span> <span class="p">{</span><span class="o">&lt;</span><span class="err">/p&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="nx">pre</span><span class="o">&gt;&lt;</span><span class="nx">code</span><span class="o">&gt;</span><span class="kd">let</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&amp;</span><span class="nx">lt</span><span class="p">;</span><span class="nx">T</span><span class="o">&amp;</span><span class="nx">gt</span><span class="p">;();</span>
+</span><span class='line'><span class="kd">let</span> <span class="nx">obs</span> <span class="o">=</span> <span class="nx">result</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'><span class="nx">fn</span><span class="p">(</span><span class="nx">subToHandler</span><span class="p">(</span><span class="nx">result</span><span class="p">,</span> <span class="nx">successFn</span><span class="p">,</span> <span class="nx">errorFn</span><span class="p">));</span>
+</span><span class='line'><span class="k">return</span> <span class="nx">obs</span><span class="p">;</span>
+</span><span class='line'><span class="o">&lt;</span><span class="err">/code&gt;&lt;/pre&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">&lt;</span><span class="nx">p</span><span class="o">&gt;</span><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></p>
+
+<p>Here I add another function <code>exec</code> which will create a subject, turn the subject into a handler using <code>subToHandler</code> defined earlier, apply the function provided as first parameter and then return an observable.</p>
+
+<p>Note that I create the observable on <code>line 4</code> before applying the function <code>fn</code>. This is important since subject will only notify its subscribers of changes after the time they subscribed.</p>
+
+<p>You&rsquo;ll also notice that the first parameter <code>fn</code> is a function which takes a <code>CallbackFunction</code> as its sole parameter. The JavaScript library functions require parameters in addition to the callback funtion, so I cannot pass the JavaScript function in to  <code>exec</code>.</p>
+
+<p>Consider the following rewrite of the <code>sendMessage</code> function:</p>
+
+<pre><code class="ts">public sendMessage(message: string): Observable&lt;string&gt; {        
+    return exec(
+        (cb: CallbackFunction) =&gt; {
+            sendJS.sendMsg(message, cb);
+        },
+        res =&gt; {
+            return "Message was sent successfully." + res;
+        }
+    );
+}
+</code></pre>
+
+<p>Here I effectively partially applied the original <code>sendJS.sendMsg</code> function by closing over the value of the first argument, <code>message</code>, and returning a new function which takes <em>only</em> a callback function as parameter. This allows the <code>exec</code> function to create the appropriate callback function, using <code>subToHandler</code> and pass it to the partially applied <code>sendMsg</code>.</p>
+
+<h3>In closing</h3>
+
+<p>By using some basic functional programming techniques I could reduce the amount of boiler plate code required when working with JavaScript libraries with traditional callback functions. I managed to reduce the code drastically and turned the callback handler into an Observable which clients of my service can subscribe to.</p>
+]]></content>
+  </entry>
+  
+</feed>
