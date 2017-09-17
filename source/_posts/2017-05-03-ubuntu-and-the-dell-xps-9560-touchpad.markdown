@@ -4,7 +4,7 @@ layout: post
 title: "Ubuntu and the Dell XPS 9560 Touchpad"
 date: 2017-05-03 23:19:47 +0000
 comments: true
-categories: 
+categories: Dell, XPS, XPS 15, Touchpad, Linux, Ubuntu
 ---
 
 I recently purchased a [Dell XPS 15 9560][xps_15] which I use for my day to day work, with Ubuntu 16.04 as the only operating system. It is a wonderful laptop and Ubuntu runs on it with virtually no issues. There is one issue which bothered me more than others. The touch pad sensitivity and palm detection. Whenever I tried to type a long piece of text I would invariably find my self type a couple of words somewhere else on the screen. 
