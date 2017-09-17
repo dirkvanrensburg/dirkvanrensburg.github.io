@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Observable | Ideas, Solutions, Work in progress]]></title>
   <link href="http://pappanyn.me/blog/categories/observable/atom.xml" rel="self"/>
   <link href="http://pappanyn.me/"/>
-  <updated>2017-09-15T07:26:32+00:00</updated>
+  <updated>2017-09-17T00:24:37+00:00</updated>
   <id>http://pappanyn.me/</id>
   <author>
     <name><![CDATA[Dirk van Rensburg]]></name>
@@ -187,7 +187,7 @@
 </span><span class='line'><span class="o">&lt;</span><span class="nx">pre</span><span class="o">&gt;&lt;</span><span class="nx">code</span><span class="o">&gt;</span><span class="kd">let</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&amp;</span><span class="nx">lt</span><span class="p">;</span><span class="nx">T</span><span class="o">&amp;</span><span class="nx">gt</span><span class="p">;();</span>
 </span><span class='line'><span class="kd">let</span> <span class="nx">obs</span> <span class="o">=</span> <span class="nx">result</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
 </span><span class='line'>
-</span><span class='line'><span class="nx">fn</span><span class="p">(</span><span class="nx">subToHandler</span><span class="p">(</span><span class="nx">result</span><span class="p">,</span> <span class="nx">successFn</span><span class="p">,</span> <span class="nx">errorFn</span><span class="p">));</span>
+</span><span class='line'><span class="nx">setTimeout</span><span class="p">(()</span> <span class="o">=&amp;</span><span class="nx">gt</span><span class="p">;</span> <span class="nx">fn</span><span class="p">(</span><span class="nx">subToHandler</span><span class="p">(</span><span class="nx">subject</span><span class="p">,</span> <span class="nx">successFn</span><span class="p">,</span> <span class="nx">errorFn</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
 </span><span class='line'><span class="k">return</span> <span class="nx">obs</span><span class="p">;</span>
 </span><span class='line'><span class="o">&lt;</span><span class="err">/code&gt;&lt;/pre&gt;</span>
 </span><span class='line'>
@@ -196,9 +196,9 @@
 
 <p>Here I add another function <code>exec</code> which will create a subject, turn the subject into a handler using <code>subToHandler</code> defined earlier, apply the function provided as first parameter and then return an observable.</p>
 
-<p>Note that I create the observable on <code>line 4</code> before applying the function <code>fn</code>. This is important since subject will only notify its subscribers of changes after the time they subscribed.</p>
+<p>Note that I create the observable on <code>line 4</code> before applying the function <code>fn</code>. This is important since subject will only notify its subscribers of changes after the time they subscribed. <code>Line 6</code> wraps the call to the function <code>fn</code> in a timeout to handle the case where <code>fn</code> doesn&rsquo;t actually call the callback function asynchronously.</p>
 
-<p>You&rsquo;ll also notice that the first parameter <code>fn</code> is a function which takes a <code>CallbackFunction</code> as its sole parameter. The JavaScript library functions require parameters in addition to the callback funtion, so I cannot pass the JavaScript function in to  <code>exec</code>.</p>
+<p>You&rsquo;ll also notice that the first parameter to exec, <code>fn</code>, is a function which takes a <code>CallbackFunction</code> as its sole parameter. The JavaScript library functions require parameters in addition to the callback funtion, so I cannot pass the JavaScript function in to <code>exec</code>.</p>
 
 <p>Consider the following rewrite of the <code>sendMessage</code> function:</p>
 

@@ -317,7 +317,7 @@
 </span><span class='line'>    <span class="kd">let</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Subject</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">();</span>
 </span><span class='line'>    <span class="kd">let</span> <span class="nx">obs</span> <span class="o">=</span> <span class="nx">result</span><span class="p">.</span><span class="nx">asObservable</span><span class="p">();</span>
 </span><span class='line'>
-</span><span class='line'>    <span class="nx">fn</span><span class="p">(</span><span class="nx">subToHandler</span><span class="p">(</span><span class="nx">result</span><span class="p">,</span> <span class="nx">successFn</span><span class="p">,</span> <span class="nx">errorFn</span><span class="p">));</span>
+</span><span class='line'>    <span class="nx">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="nx">fn</span><span class="p">(</span><span class="nx">subToHandler</span><span class="p">(</span><span class="nx">subject</span><span class="p">,</span> <span class="nx">successFn</span><span class="p">,</span> <span class="nx">errorFn</span><span class="p">)),</span> <span class="mi">0</span><span class="p">);</span>
 </span><span class='line'>    <span class="k">return</span> <span class="nx">obs</span><span class="p">;</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
@@ -325,9 +325,9 @@
 
 <p>Here I add another function <code>exec</code> which will create a subject, turn the subject into a handler using <code>subToHandler</code> defined earlier, apply the function provided as first parameter and then return an observable.</p>
 
-<p>Note that I create the observable on <code>line 4</code> before applying the function <code>fn</code>. This is important since subject will only notify its subscribers of changes after the time they subscribed.</p>
+<p>Note that I create the observable on <code>line 4</code> before applying the function <code>fn</code>. This is important since subject will only notify its subscribers of changes after the time they subscribed. <code>Line 6</code> wraps the call to the function <code>fn</code> in a timeout to handle the case where <code>fn</code> doesn&rsquo;t actually call the callback function asynchronously.</p>
 
-<p>You&rsquo;ll also notice that the first parameter <code>fn</code> is a function which takes a <code>CallbackFunction</code> as its sole parameter. The JavaScript library functions require parameters in addition to the callback funtion, so I cannot pass the JavaScript function in to  <code>exec</code>.</p>
+<p>You&rsquo;ll also notice that the first parameter to exec, <code>fn</code>, is a function which takes a <code>CallbackFunction</code> as its sole parameter. The JavaScript library functions require parameters in addition to the callback funtion, so I cannot pass the JavaScript function in to <code>exec</code>.</p>
 
 <p>Consider the following rewrite of the <code>sendMessage</code> function:</p>
 
